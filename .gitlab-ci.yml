@@ -1,5 +1,5 @@
 default:
-  tag:
+  tags:
     - docker-gcc
   image: alpine:latest
 
