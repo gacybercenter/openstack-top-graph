@@ -1,0 +1,19 @@
+default:
+  tag:
+    - docker-gcc
+  image: alpine:latest
+
+stages:
+  - deploy
+
+pages:
+  stage: deploy
+  script:
+    - echo 'Saving Static Site to artifacts'
+  artifacts:
+    expire_in: 3 month
+    paths:
+    - public
+  only:
+    changes:
+      - public/**/*
