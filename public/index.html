@@ -4,6 +4,7 @@
         <meta charset="UTF-8">
         <title>OpenStack Topology Graph</title>
         <link rel="stylesheet" href="./assets/css/site.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
         <script src="https://d3js.org/d3.v6.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
         <link rel="icon" href="./assets/img/favicon.ico" type="image/x-icon">
@@ -104,8 +105,18 @@
                                 break;
                             case "OS::Nova::Server":
                                 nodeMap[resourceName].type = "Server";
+                                break;
+                            case "OS::Heat::ResourceGroup":
+                                nodeMap[resourceName].type = "ResourceGroup";
+                                break;
                             case "OS::Neutron::Port":
                                 nodeMap[resourceName].type = "Port";
+                                break;
+                            case "OS::Neutron::Router":
+                                nodeMap[resourceName].type = "Router";
+                                break;
+                            case "OS::Neutron::RouterInterface":
+                                nodeMap[resourceName].type = "RouterInterface";
                                 break;
                             default:
                                 nodeMap[resourceName].type = "Unknown";
@@ -122,21 +133,27 @@
                         .enter().append("g")
                         .attr("class", "node")
                         .call(drag(simulation));
-                    // bind drag behavior to the nodes
-                    node.append("circle")
-                        .attr("r", 10)
-                        .attr("fill", d => {
+                    node.append("foreignObject")
+                        .attr("width", "20")
+                        .attr("height", "20")
+                        .html(d => {
                             switch (d.type) {
                                 case "Net":
-                                    return "red";
+                                    return '<i class="fas fa-cloud"></i>';
                                 case "Subnet":
-                                    return "orange";
+                                    return '<i class="fas fa-network-wired"></i>';
                                 case "Server":
-                                    return "blue";
+                                    return '<i class="fas fa-desktop"></i>';
+                                case "ResourceGroup":
+                                    return '<i class="fas fa-server"></i>';
                                 case "Port":
-                                    return "green";
+                                    return '<i class="fas fa-ethernet"></i>';
+                                case "Router":
+                                    return '<i class="fas fa-border-all"></i>';
+                                case "RouterInterface":
+                                    return '<i class="fas fa-sort-down"></i>';
                                 default:
-                                    return "black";
+                                    return '<i class="fas fa-question"></i>';
                             }
                         });
                     node.append("text")
