@@ -44,93 +44,74 @@ function nodeMap(parsedContent) {
     //  Separate the parsed JSON or YAML heat templates into a node map.
     //  Requires: JSON or YAML
     //  Returns: A node map of the devices
-    const nodeMap = {}; // Create an empty object to store nodes.
+
+    var root = { name: "openstack" };
+    var nodes = [root];
+    var depends = [];
     const links = []; // Create an empty array to store links between nodes.
 
     const resources = parsedContent.resources; // Get the resources object from the parsed content.
     for (const [resourceName, resource] of Object.entries(resources)) { // Iterate through each resource.
-        const type = resource.type.split("::")[2]; // Extract the resource type.
-        const id = `${resourceName}`; // Extract the resource ID.
-        nodeMap[resourceName] = { id, type }; // Add the node to the node map object.
-    }
-    console.log(nodeMap); // Print the node map object to the console.
 
-    for (const [resourceName, resource] of Object.entries(resources)) { // Iterate through each resource.
         const dependencies = Object.keys(resource.properties || {}); // Get the dependencies of the resource.
-        for (const dependency of dependencies) { // Iterate through each dependency.
+
+        const name = `${resourceName}`; // Extract the resource name.
+        const type = resource.type.split("::")[2]; // Extract the resource type.
+
+        var node = {
+            'name': name,
+            'type': type
+        }
+        nodes.push(node); // Add the node to the node map object.
+
+        // Iterate through each dependency.
+        for (const dependency of dependencies) {
             if (resource.properties[dependency] && resource.properties[dependency]["get_resource"]) {
-                const dependentResourceName = resource.properties[dependency]["get_resource"];
-                const sourceId = nodeMap[dependentResourceName].id;
-                const targetId = nodeMap[resourceName].id;
-                links.push({ source: sourceId, target: targetId }); // Add a link between the dependent and target resources.
+                // Add source and target names if there is a dependency.
+                sourceNode = resource.properties[dependency]["get_resource"];
+                depends.push({
+                    source: sourceNode,
+                    target: resourceName
+                });
             }
-        }
-        if (resource.properties && resource.properties.fixed_ips) {
-            for (const fixedIp of resource.properties.fixed_ips) {
-                if (fixedIp.subnet) {
-                    const sourceId = nodeMap[resourceName].id;
-                    const targetId = nodeMap[fixedIp.subnet]["id"];
-                    links.push({ source: sourceId, target: targetId }); // Add a link between the resource and the subnet.
-                }
-            }
-        }
-        switch (resource.type) { // Check the resource type and set the type of the node accordingly.
-            case "OS::Neutron::Net":
-                nodeMap[resourceName].type = "Net";
-                break;
-            case "OS::Neutron::Subnet":
-                nodeMap[resourceName].type = "Subnet";
-                break;
-            case "OS::Nova::Server":
-                nodeMap[resourceName].type = "Server";
-                break;
-            case "OS::Heat::ResourceGroup":
-                nodeMap[resourceName].type = "ResourceGroup";
-                break;
-            case "OS::Neutron::Port":
-                nodeMap[resourceName].type = "Port";
-                break;
-            case "OS::Neutron::Router":
-                nodeMap[resourceName].type = "Router";
-                break;
-            case "OS::Neutron::RouterInterface":
-                nodeMap[resourceName].type = "RouterInterface";
-                break;
-            default:
-                nodeMap[resourceName].type = "Unknown";
-                break;
         }
     }
-    return {"nodeMap" : nodeMap, "links" : links}; // Return the node map and links as an object.
+    // Iterate through each dependency.
+    for (const depend of depends) {
+        links.push({
+            source: nodes[findIndex(nodes, depend['source'])],
+            target: nodes[findIndex(nodes, depend['target'])]
+        });
+    }
+    return { "nodes": nodes, "links": links }; // Return the node map and links as an object.
 }
-
 
 function drawNodes(nodesAndLinks) {
     //  Draws a network diagram from a node map.
     //  Requires: A node map
     //  Returns: The network map the node map represents
-    
+
     // Extract the node map and links from the input object
-    const nodeMap = nodesAndLinks["nodeMap"];
+    const nodes = nodesAndLinks["nodes"];
     const links = nodesAndLinks["links"];
-
-    // Set the dimensions of the SVG element
-    WIDTH = innerWidth;
-    HEIGHT = innerHeight;    
-
-    // Select the SVG element and set its width and height attributes
+    
+    let WIDTH = window.innerWidth;
+    let HEIGHT = window.innerHeight;
+    
     const svg = d3.select("svg")
-    .attr("width", WIDTH)
-    .attr("height", HEIGHT);
-
-    // Set up the simulation
-    const simulation = d3.forceSimulation()
+        .attr("width", WIDTH)
+        .attr("height", HEIGHT);
+    
+    let link = svg.selectAll(".link");
+    let node = svg.selectAll(".node");
+    
+    const simulation = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id))
         .force("charge", d3.forceManyBody())
         .force("center", d3.forceCenter(WIDTH / 2, HEIGHT / 2))
         .force("collision", d3.forceCollide().radius(d => d.r * 1.1))
         .on("tick", () => {
-            // Update the positions of the nodes and links
+            // Add boundary checking
             node.attr("transform", d => `translate(${Math.max(d.r, Math.min(WIDTH - d.r, d.x))},${Math.max(d.r, Math.min(HEIGHT - d.r, d.y))})`);
             link.attr("x1", d => d.source.x)
                 .attr("y1", d => d.source.y)
@@ -138,12 +119,7 @@ function drawNodes(nodesAndLinks) {
                 .attr("y2", d => d.target.y);
             node.attr("transform", d => `translate(${d.x},${d.y})`);
         });
-
-    // Create selections for the links and nodes
-    let link = svg.selectAll(".link");
-    let node = svg.selectAll(".node");
     
-    // Define the drag behavior for the nodes
     const drag = simulation => {
         function dragstarted(event) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -164,47 +140,58 @@ function drawNodes(nodesAndLinks) {
             .on("drag", dragged)
             .on("end", dragended);
     }
-
-    // Extract the nodes from the node map
-    const nodes = Object.values(nodeMap);
-
-    // Bind the data to the links and nodes selections and create new elements as needed
-    link = link.data(links)
+    
     link = link.data(links)
         .enter().append("line")
         .attr("class", "link");
+    
     node = node.data(nodes)
         .enter().append("g")
         .attr("class", "node")
         .call(drag(simulation));
-
-    // Add the icons to the nodes based on their type
+    
     node.append("foreignObject")
         .attr("width", "20")
         .attr("height", "20")
         .html(d => {
             switch (d.type) {
                 case "Net":
-                    return '<i class="fas fa-cloud"></i>'; // Cloud icon
+                    return '<i class="fas fa-cloud"></i>';
                 case "Subnet":
-                    return '<i class="fas fa-network-wired"></i>'; // Network icon
+                    return '<i class="fas fa-network-wired"></i>';
                 case "Server":
-                    return '<i class="fas fa-desktop"></i>'; // Desktop icon
+                    return '<i class="fas fa-desktop"></i>';
                 case "ResourceGroup":
-                    return '<i class="fas fa-server"></i>'; // Server icon
+                    return '<i class="fas fa-server"></i>';
                 case "Port":
-                    return '<i class="fas fa-ethernet"></i>'; // Ethernet icon
+                    return '<i class="fas fa-ethernet"></i>';
                 case "Router":
-                    return '<i class="fas fa-border-all"></i>'; // Router icon
+                    return '<i class="fas fa-border-all"></i>';
                 case "RouterInterface":
-                    return '<i class="fas fa-sort-down"></i>'; // Arrow down icon
+                    return '<i class="fas fa-sort-down"></i>';
                 default:
-                    return '<i class="fas fa-question"></i>'; // Question mark icon
+                    return '<i class="fas fa-question"></i>';
             }
         });
+    
     node.append("text")
         .text(d => d.id);
-    simulation.nodes(nodes);
-    simulation.force("link").links(links);
+    
     simulation.alpha(1).restart();
+}
+
+
+function findIndex(arr, targetName) {
+    try {
+        for (let i in arr) {
+            if (arr[i].hasOwnProperty('name') && arr[i]['name'] === targetName) {
+                return i;
+            }
+        }
+    }
+    catch (error) {
+        // If there was an finding the dependency index, log the error to the console.
+        console.error(`Error parsing ${fileType} file: ${error}`);
+    }
+    return -1; // If the target name is not found in any dictionary, return -1.
 }
