@@ -25,6 +25,9 @@ hosts.forEach(function (host) {
     }
 });
 
+console.log(nodes); // Print the node map object to the console.
+console.log(links); // Print the node map object to the console.
+
 var force = d3.layout.force()
     .size([window.innerWidth, window.innerHeight])
     .nodes(nodes)

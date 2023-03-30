@@ -1,197 +1,202 @@
-// Define a function to handle file selection.
-function handleFileSelect(event) {
-    // Get the selected file.
-    const file = event.target.files[0];
+function handleFileSelect(event) {                      // Define a function to handle file selection.
 
-    // Check if the file is in YAML or JSON format.
-    const isYaml = file.name.endsWith(".yaml") || file.name.endsWith(".yml");
+    const file = event.target.files[0];                 // Get the selected file.
+
+    const isYaml = file.name.endsWith(".yaml")          // Check if the file is in YAML or JSON format.
+        || file.name.endsWith(".yml");
     const fileType = isYaml ? "yaml" : "json";
 
-    // Create a new FileReader object to read the contents of the file.
-    const reader = new FileReader();
+    const reader = new FileReader();                    // Create a new FileReader object to read the contents of the file.
 
-    // Set up a callback function to handle the file load event.
-    reader.onload = function (event) {
+    reader.onload = function (event) {                  // Set up a callback function to handle the file load event.
         try {
-            // Get the file contents from the FileReader object.
-            const fileContent = event.target.result;
+            const fileContent = event.target.result;    // Get the file contents from the FileReader object.
+            const parsedContent = fileType === "yaml"   // Parse the file contents based on the file type.
+                ? jsyaml.load(fileContent)
+                : JSON.parse(fileContent);
 
-            // Parse the file contents based on the file type.
-            const parsedContent = fileType === "yaml" ? jsyaml.load(fileContent) : JSON.parse(fileContent);
+            nodesAndLinks = nodeMap(parsedContent);     // Construct a node map based on the parsed content.
 
-            // Construct a node map based on the parsed content.
-            nodesAndLinks = nodeMap(parsedContent);
-
-            // Draw the node map.
             drawNodes(nodesAndLinks);
 
-            // Log the parsed content to the console for debugging purposes.
-            console.log(parsedContent);
-        } catch (error) {
-            // If there was an error parsing the file, log the error to the console.
+            // console.log(parsedContent);                 // Log the parsed content to the console for debugging purposes.
+        } catch (error) {                               // If there was an error parsing the file, log the error to the console.
             console.error(`Error parsing ${fileType} file: ${error}`);
         }
     };
-
-    // Read the file as text using UTF-8 encoding.
-    reader.readAsText(file, "UTF-8");
+    reader.readAsText(file, "UTF-8");                   // Read the file as text using UTF-8 encoding.
 }
 const fileInput = document.getElementById("file-input");
 fileInput.addEventListener("change", handleFileSelect, false);
 
 
 function nodeMap(parsedContent) {
-    //  Separate the parsed JSON or YAML heat templates into a node map.
-    //  Requires: JSON or YAML
-    //  Returns: A node map of the devices
+    // Separate the parsed JSON or YAML heat templates into a node map.
+    // Requires: JSON or YAML
+    // Returns: A node map of the devices
+    const root = { name: "openstack", type: "Root" };
+    const nodes = [root];
+    const links = [];
 
-    var root = { name: "openstack" };
-    var nodes = [root];
-    var depends = [];
-    const links = []; // Create an empty array to store links between nodes.
+    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
+        const name = `${resourceName}`;
+        const type = resource.type.split("::")[2];
+        const data = resource.properties;
 
-    const resources = parsedContent.resources; // Get the resources object from the parsed content.
-    for (const [resourceName, resource] of Object.entries(resources)) { // Iterate through each resource.
+        console.log(resource)
 
-        const dependencies = Object.keys(resource.properties || {}); // Get the dependencies of the resource.
+        const node = { name, type, data };
+        nodes.push(node);
 
-        const name = `${resourceName}`; // Extract the resource name.
-        const type = resource.type.split("::")[2]; // Extract the resource type.
-
-        var node = {
-            'name': name,
-            'type': type
+        if (type === 'Router') {
+            links.push({ source: node, target: root });
         }
-        nodes.push(node); // Add the node to the node map object.
-
-        // Iterate through each dependency.
-        for (const dependency of dependencies) {
-            if (resource.properties[dependency] && resource.properties[dependency]["get_resource"]) {
-                // Add source and target names if there is a dependency.
-                sourceNode = resource.properties[dependency]["get_resource"];
-                depends.push({
-                    source: sourceNode,
-                    target: resourceName
-                });
+    }
+    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
+        const processProperty = (property, parentResourceName) => {
+            if (typeof property === 'object') {
+                if (property['get_resource'] !== undefined) {
+                    const target = nodes.find(n => n.name === parentResourceName);
+                    const source = nodes.find(n => n.name === property['get_resource']);
+                    if (source.type !== 'Net' || target.type !== 'Port') {
+                        links.push({ source, target });
+                    }
+                }
+                for (const [key, value] of Object.entries(property)) {
+                    processProperty(value, parentResourceName);
+                }
             }
         }
+
+        for (const [propertyName, property] of Object.entries(resource.properties)) {
+            processProperty(property, resourceName);
+        }
     }
-    // Iterate through each dependency.
-    for (const depend of depends) {
-        links.push({
-            source: nodes[findIndex(nodes, depend['source'])],
-            target: nodes[findIndex(nodes, depend['target'])]
-        });
-    }
-    return { "nodes": nodes, "links": links }; // Return the node map and links as an object.
+    return { nodes, links };
 }
+
+// dependencies.forEach(dependency => {
+//     const sourceNode = resource.properties[dependency]?.["get_resource"];
+//     sourceNode.forEach(dependency => {
+//         if (sourceNode) {
+//             const target = nodes.find(n => n.name === resourceName);
+//             const source = nodes.find(n => n.name === sourceNode);
+//             links.push({ source, target });
+//         }
+//     });
+// });
 
 function drawNodes(nodesAndLinks) {
     //  Draws a network diagram from a node map.
     //  Requires: A node map
     //  Returns: The network map the node map represents
 
-    // Extract the node map and links from the input object
-    const nodes = nodesAndLinks["nodes"];
-    const links = nodesAndLinks["links"];
-    
-    let WIDTH = window.innerWidth;
-    let HEIGHT = window.innerHeight;
-    
-    const svg = d3.select("svg")
-        .attr("width", WIDTH)
-        .attr("height", HEIGHT);
-    
-    let link = svg.selectAll(".link");
-    let node = svg.selectAll(".node");
-    
-    const simulation = d3.forceSimulation(nodes)
+    const nodes = nodesAndLinks.nodes;
+    const links = nodesAndLinks.links;
+
+    const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];
+    const legendData = uniqueNodeTypes.map((type, i) => ({ type, color: d3.schemeCategory10[i] }));
+
+    const colorScale = d3.scaleOrdinal()
+        .domain(uniqueNodeTypes)
+        .range(d3.schemeCategory10);
+
+    const force = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id))
-        .force("charge", d3.forceManyBody())
-        .force("center", d3.forceCenter(WIDTH / 2, HEIGHT / 2))
-        .force("collision", d3.forceCollide().radius(d => d.r * 1.1))
-        .on("tick", () => {
-            // Add boundary checking
-            node.attr("transform", d => `translate(${Math.max(d.r, Math.min(WIDTH - d.r, d.x))},${Math.max(d.r, Math.min(HEIGHT - d.r, d.y))})`);
-            link.attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
-            node.attr("transform", d => `translate(${d.x},${d.y})`);
-        });
-    
-    const drag = simulation => {
+        .force("charge", d3.forceManyBody().strength(-1500))
+        .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
+        .force("x", d3.forceX())
+        .force("y", d3.forceY())
+        .on("tick", update);
+
+    const svg = d3.select('body')
+        .append('svg')
+        .attr('width', window.innerWidth)
+        .attr('height', window.innerHeight);
+
+    const linksGroup = svg.append('g')
+        .attr('stroke', '#000000')
+        .attr('stroke-width', 2)
+        .selectAll('line')
+        .data(links)
+        .join('line');
+
+    const circles = svg.selectAll('circle')
+        .data(nodes)
+        .join('circle')
+        .attr('r', d => d.type == 'Root' ? 40 : 30)
+        .attr('fill', d => colorScale(d.type))
+        .call(drag(force));
+
+    const texts = svg.selectAll('text')
+        .data(nodes)
+        .join('text')
+        .text(d => d.name)
+        .attr('fill', 'white')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '40')
+        .style('font-family', "Verdana, Helvetica, Sans-Serif")
+        .style('font-size', 12)
+        .style('pointer-events', 'none');
+
+    const legend = svg.append("g")
+        .attr("class", "legend")
+        .attr("transform", "translate(50, 10)");
+
+    legend.selectAll("rect")
+        .data(legendData)
+        .enter()
+        .append("rect")
+        .attr("x", 10)
+        .attr("y", (d, i) => i * 30 + 0)
+        .attr("width", 20)
+        .attr("height", 20)
+        .attr("fill", d => d.color)
+
+    legend.selectAll("text")
+        .data(legendData)
+        .enter()
+        .append("text")
+        .attr("x", 40)
+        .attr("y", (d, i) => i * 30 + 15)
+        .text(d => d.type)
+        .style("font-size", "16px")
+        .style("fill", "#333");
+
+    function update() {
+        circles.attr('cx', d => d.x)
+            .attr('cy', d => d.y);
+
+        texts.attr('x', d => d.x)
+            .attr('y', d => d.y);
+
+        linksGroup.attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+    }
+
+    function drag(simulation) {
         function dragstarted(event) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             event.subject.fx = event.subject.x;
             event.subject.fy = event.subject.y;
         }
+
         function dragged(event) {
             event.subject.fx = event.x;
             event.subject.fy = event.y;
         }
+
         function dragended(event) {
             if (!event.active) simulation.alphaTarget(0);
             event.subject.fx = null;
             event.subject.fy = null;
         }
+
         return d3.drag()
             .on("start", dragstarted)
             .on("drag", dragged)
             .on("end", dragended);
     }
-    
-    link = link.data(links)
-        .enter().append("line")
-        .attr("class", "link");
-    
-    node = node.data(nodes)
-        .enter().append("g")
-        .attr("class", "node")
-        .call(drag(simulation));
-    
-    node.append("foreignObject")
-        .attr("width", "20")
-        .attr("height", "20")
-        .html(d => {
-            switch (d.type) {
-                case "Net":
-                    return '<i class="fas fa-cloud"></i>';
-                case "Subnet":
-                    return '<i class="fas fa-network-wired"></i>';
-                case "Server":
-                    return '<i class="fas fa-desktop"></i>';
-                case "ResourceGroup":
-                    return '<i class="fas fa-server"></i>';
-                case "Port":
-                    return '<i class="fas fa-ethernet"></i>';
-                case "Router":
-                    return '<i class="fas fa-border-all"></i>';
-                case "RouterInterface":
-                    return '<i class="fas fa-sort-down"></i>';
-                default:
-                    return '<i class="fas fa-question"></i>';
-            }
-        });
-    
-    node.append("text")
-        .text(d => d.id);
-    
-    simulation.alpha(1).restart();
-}
-
-
-function findIndex(arr, targetName) {
-    try {
-        for (let i in arr) {
-            if (arr[i].hasOwnProperty('name') && arr[i]['name'] === targetName) {
-                return i;
-            }
-        }
-    }
-    catch (error) {
-        // If there was an finding the dependency index, log the error to the console.
-        console.error(`Error parsing ${fileType} file: ${error}`);
-    }
-    return -1; // If the target name is not found in any dictionary, return -1.
 }

@@ -5,8 +5,9 @@
     <meta charset="UTF-8">
     <title>OpenStack Topology Graph</title>
     <link rel="stylesheet" href="./assets/css/site.css">
-    <script src="https://d3js.org/d3.v6.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/3.14.1/js-yaml.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-MD8OoW9Xv+r1z94zwMFhJfZ1RaxIn4feI4c4Ys4sAA8TszNeXq3LY6SwwU6aa0DwA8EGvJmZC+YkKHtuPmCcdg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="icon" href="./assets/img/favicon.ico" type="image/x-icon">
 </head>
 
@@ -15,65 +16,6 @@
     <div class="container">
         <svg></svg>
     </div>
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-links">
-                <div class="col">
-                    <ul class="social-icons">
-                        <li>
-                            <a href="https://www.gacybercenter.org/services/cyber-range/" target="_blank" class="icon">
-                                <img src="./assets/img/gcc_horz_white.svg" alt="Georgia Cyber Center">
-                            </a>
-                            <a href="https://gitlab.com/gacybercenter" target="_blank" class="icon">
-                                <svg width="32" height="32" viewBox="0 0 54 54">
-                                    <path fill="none" d="M-.2.1h53.8v53.4H-.2z"></path>
-                                    <path
-                                        d="M26.6 49.3L2.4 31.7c-.3-.2-.6-.6-.7-1-.1-.4-.1-.8 0-1.2L4.5 21l22.1 28.3zM11.9 3.9L17.4 21H4.5L10 3.9c.1-.4.5-.6.9-.6.6-.1.9.2 1 .6zM17.4 21h18.4l-9.2 28.3L17.4 21zm34.2 8.6c.1.4.1.8 0 1.2-.1.4-.4.7-.7 1L26.6 49.3 48.7 21l2.9 8.6zM48.7 21H35.9l5.5-17.1c.1-.4.5-.6.9-.6.5 0 .8.2.9.6L48.7 21z">
-                                    </path>
-                                </svg>
-                            </a>
-                            <a href="https://github.com/gacybercenter" target="_blank" class="icon">
-                                <svg width="32" height="32" viewBox="0 0 32 32">
-                                    <path id="github" data-name="cls-1"
-                                        d="M152.608,107.44a16.291,16.291,0,0,0-5.148,31.747c.815.149,1.112-.353,1.112-.785,0-.387-.014-1.411-.022-2.771-4.531.985-5.487-2.183-5.487-2.183a4.315,4.315,0,0,0-1.809-2.383c-1.479-1.011.112-.99.112-.99a3.42,3.42,0,0,1,2.495,1.678,3.468,3.468,0,0,0,4.741,1.354,3.482,3.482,0,0,1,1.034-2.178c-3.617-.411-7.42-1.808-7.42-8.051a6.3,6.3,0,0,1,1.677-4.371,5.852,5.852,0,0,1,.16-4.311s1.367-.438,4.479,1.67a15.448,15.448,0,0,1,8.156,0c3.11-2.108,4.475-1.67,4.475-1.67a5.854,5.854,0,0,1,.163,4.311A6.286,6.286,0,0,1,163,122.878c0,6.258-3.809,7.635-7.438,8.038a3.889,3.889,0,0,1,1.106,3.017c0,2.178-.02,3.935-.02,4.469,0,.435.294.942,1.12.783a16.292,16.292,0,0,0-5.16-31.745Z"
-                                        transform="translate(-136.32 -107.44)" fill="#333" fill-rule="evenodd"
-                                        style="fill:#000000"></path>
-                                </svg>
-                            </a>
-                            <a href="https://www.facebook.com/GACyberCenter/" target="_blank" class="icon">
-                                <svg width="32" height="32" viewBox="0 0 32 32">
-                                    <path id="facebook" class="cls-1"
-                                        d="M29,0H3A2.652,2.652,0,0,0,0,3V29a2.652,2.652,0,0,0,3,3H16V18H12V14h4V12a6.452,6.452,0,0,1,6-6h4v4H22a2.151,2.151,0,0,0-2,2v2h6l-1,4H20V32h9a2.652,2.652,0,0,0,3-3V3A2.652,2.652,0,0,0,29,0Z">
-                                    </path>
-                                </svg>
-                            </a>
-                            <a href="https://twitter.com/GACyberCenter" target="_blank" class="icon">
-                                <svg width="32" height="32" viewBox="0 0 32.1 26.1">
-                                    <path id="twitter" class="cls-1"
-                                        d="M32,7.1a11.836,11.836,0,0,1-3.8,1,6.462,6.462,0,0,0,2.9-3.6,12.606,12.606,0,0,1-4.2,1.6A6.492,6.492,0,0,0,22.1,4a6.594,6.594,0,0,0-6.6,6.6,7.719,7.719,0,0,0,.2,1.5A18.458,18.458,0,0,1,2.2,5.2a6.294,6.294,0,0,0-.9,3.3A6.765,6.765,0,0,0,4.2,14a6.109,6.109,0,0,1-3-.8v.1a6.543,6.543,0,0,0,5.3,6.4,4.678,4.678,0,0,1-1.7.2,4.869,4.869,0,0,1-1.2-.1,6.679,6.679,0,0,0,6.1,4.6,12.917,12.917,0,0,1-8.2,2.8,9.151,9.151,0,0,1-1.6-.1,18.438,18.438,0,0,0,10.1,3c12.1,0,18.7-10,18.7-18.7v-.8A13.336,13.336,0,0,0,32,7.2Z"
-                                        transform="translate(0.1 -4)"></path>
-                                </svg>
-                            </a>
-                            <a href="https://www.linkedin.com/company/gacybercenter" target="_blank" class="icon">
-                                <svg width="32" height="32" viewBox="0 0 32 32">
-                                    <path id="linkedin" class="cls-1"
-                                        d="M29,0H3A3.076,3.076,0,0,0,0,3V29a3.009,3.009,0,0,0,3,3H29a2.946,2.946,0,0,0,3-3V3A3.009,3.009,0,0,0,29,0ZM12,26H8V12h4ZM10,10a2,2,0,1,1,2-2A2.006,2.006,0,0,1,10,10ZM26,26H22V18a2,2,0,0,0-4,0v8H14V12h4v2.5c.8-1.1,2.1-2.5,3.5-2.5A4.736,4.736,0,0,1,26,17Z">
-                                    </path>
-                                </svg>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="col">
-                    <div class="footer-terms-links">
-                        <p>Site content is licensed under the terms of the <a
-                                href="https://www.apache.org/licenses/license-2.0.txt" target="_blank">Apache 2.0
-                                license.</a></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </footer>
     <!-- <script src="./assets/js/topology_old.js"></script> -->
     <script src="./assets/js/hot-parse.js"></script>
 </body>
