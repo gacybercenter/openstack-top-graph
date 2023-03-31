@@ -38,12 +38,16 @@ function nodeMap(parsedContent) {
     const nodes = [root];
     const links = [];
 
+    var title = parsedContent.description;
+
+    if (parsedContent.parameters.range_id) {
+        title = parsedContent.parameters.range_id.default
+    }
+
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
         const name = `${resourceName}`;
         const type = resource.type.split("::")[2];
         const data = resource.properties;
-
-        console.log(resource)
 
         const node = { name, type, data };
         nodes.push(node);
@@ -72,19 +76,8 @@ function nodeMap(parsedContent) {
             processProperty(property, resourceName);
         }
     }
-    return { nodes, links };
+    return { nodes, links, title };
 }
-
-// dependencies.forEach(dependency => {
-//     const sourceNode = resource.properties[dependency]?.["get_resource"];
-//     sourceNode.forEach(dependency => {
-//         if (sourceNode) {
-//             const target = nodes.find(n => n.name === resourceName);
-//             const source = nodes.find(n => n.name === sourceNode);
-//             links.push({ source, target });
-//         }
-//     });
-// });
 
 function drawNodes(nodesAndLinks) {
     //  Draws a network diagram from a node map.
@@ -93,13 +86,24 @@ function drawNodes(nodesAndLinks) {
 
     const nodes = nodesAndLinks.nodes;
     const links = nodesAndLinks.links;
+    const title = nodesAndLinks.title;
 
     const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];
-    const legendData = uniqueNodeTypes.map((type, i) => ({ type, color: d3.schemeCategory10[i] }));
+    const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a', 
+                    '#003359 ', '#A5ACAF', '#3CB6CE', '#00AEEF', '#64A0C8', '#44D62C'];
+    const legendData = uniqueNodeTypes.map((type, i) => ({ type, color: colors[i] }));
 
-    const colorScale = d3.scaleOrdinal()
-        .domain(uniqueNodeTypes)
-        .range(d3.schemeCategory10);
+    const colorScale = (function () {
+        const domain = uniqueNodeTypes;
+        const range = colors;
+        const scale = {};
+        domain.forEach((value, i) => {
+            scale[value] = range[i];
+        });
+        return function (type) {
+            return scale[type];
+        };
+    })();
 
     const force = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id))
@@ -121,23 +125,96 @@ function drawNodes(nodesAndLinks) {
         .data(links)
         .join('line');
 
+    const tooltip = d3.select('body')
+        .append('div')
+        .attr('class', 'tooltip')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden')
+        .style('background-color', '#fff')
+        .style('border-radius', '4px')
+        .style('box-shadow', '0 2px 5px rgba(0, 0, 0, 0.3)')
+        .style('padding', '10px')
+        .style('font-size', '14px')
+        .style('pointer-events', 'none')
+        .style('line-height', '1.4')
+        .style('max-width', '300px')
+        .style('text-align', 'center');
+
+    console.log(nodes[1].data)
+
     const circles = svg.selectAll('circle')
         .data(nodes)
         .join('circle')
         .attr('r', d => d.type == 'Root' ? 40 : 30)
         .attr('fill', d => colorScale(d.type))
+        .on('mouseenter', (event, d) => {
+            const tooltip = d3.select('.tooltip');
+            tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${formatObject(d.data)}`);
+            tooltip.style('visibility', 'visible')
+                .style('text-align', 'left');
+        })
+        .on('mousemove', (event) => {
+            const tooltip = d3.select('.tooltip');
+            tooltip.style('top', (event.pageY + 10) + 'px');
+            tooltip.style('left', (event.pageX - (tooltip.node().getBoundingClientRect().width / 2)) + 'px');
+        })
+        .on('mouseleave', () => {
+            const tooltip = d3.select('.tooltip');
+            tooltip.style('visibility', 'hidden');
+        })
         .call(drag(force));
 
-    const texts = svg.selectAll('text')
+    function formatObject(obj, key = '', indent = 0, parentKey = '') {
+        let html = '';
+        if (Array.isArray(obj)) {
+            obj.forEach((value) => {
+                if (value !== '' && value !== '.')
+                    html += formatObject(value, `${key}`, indent + 2, parentKey);
+            });
+        } else if (typeof obj === 'object' && obj !== null) {
+            for (const [objKey, value] of Object.entries(obj)) {
+                const currentKey = objKey === 'get_resource' ? parentKey : objKey;
+                if (currentKey !== 'template' && currentKey !== 'get_param' && currentKey !== 'user_data_format' && currentKey !== 'list_join') {
+                    html += formatObject(value, currentKey, indent + 2, currentKey);
+                } else if (currentKey === 'list_join') {
+                    html += formatObject(value, parentKey, indent + 2, parentKey);
+                }
+            }
+        } else {
+            if (key !== '' && key !== undefined) {
+                html += `<strong>${key}: </strong>${obj}<br/>`;
+            }
+        }
+        return html;
+    }
+
+    const names = svg.selectAll('text')
         .data(nodes)
         .join('text')
         .text(d => d.name)
-        .attr('fill', 'white')
+        .attr('fill', 'black')
         .attr('text-anchor', 'middle')
-        .attr('dy', '40')
+        .attr('dy',  d => d.type == 'Root' ? 50 : 40)
         .style('font-family', "Verdana, Helvetica, Sans-Serif")
         .style('font-size', 12)
         .style('pointer-events', 'none');
+
+    const titleMaxWidth = window.innerWidth / 1.5;
+
+    const top = svg.append('text')
+        .text(title)
+        .attr('x', window.innerWidth / 2)
+        .attr('y', 30)
+        .attr('fill', 'black')
+        .attr('text-anchor', 'middle')
+        .style('font-family', "Verdana, Helvetica, Sans-Serif")
+        .style('font-size', 32)
+        .attr('textLength', function () {
+            const length = this.getComputedTextLength();
+            return length > titleMaxWidth ? titleMaxWidth : length;
+        })
+        .attr('lengthAdjust', 'spacingAndGlyphs')
+        .attr('title', title);
 
     const legend = svg.append("g")
         .attr("class", "legend")
@@ -167,7 +244,7 @@ function drawNodes(nodesAndLinks) {
         circles.attr('cx', d => d.x)
             .attr('cy', d => d.y);
 
-        texts.attr('x', d => d.x)
+        names.attr('x', d => d.x)
             .attr('y', d => d.y);
 
         linksGroup.attr('x1', d => d.source.x)
@@ -186,6 +263,9 @@ function drawNodes(nodesAndLinks) {
         function dragged(event) {
             event.subject.fx = event.x;
             event.subject.fy = event.y;
+
+            const tooltip = d3.select('.tooltip');
+            tooltip.style('visibility', 'hidden');
         }
 
         function dragended(event) {
