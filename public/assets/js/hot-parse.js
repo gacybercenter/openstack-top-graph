@@ -119,7 +119,7 @@ function drawNodes(nodesAndLinks) {
         .attr('height', window.innerHeight);
 
     const linksGroup = svg.append('g')
-        .attr('stroke', '#000000')
+        .attr('stroke', '#333333')
         .attr('stroke-width', 2)
         .selectAll('line')
         .data(links)
