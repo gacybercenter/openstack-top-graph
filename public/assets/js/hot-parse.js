@@ -38,10 +38,12 @@ function nodeMap(parsedContent) {
     const nodes = [root];
     const links = [];
 
-    var title = parsedContent.description;
+    var title = "No Title Found...";
 
     if (parsedContent.parameters.range_id) {
-        title = parsedContent.parameters.range_id.default
+        title = parsedContent.parameters.range_id.default;
+    } else if (parsedContent.description) {
+        title = parsedContent.description;
     }
 
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
@@ -163,7 +165,7 @@ function drawNodes(nodesAndLinks) {
             tooltip.style('visibility', 'hidden');
         })
         .call(drag(force));
-
+        
     function formatObject(obj, key = '', indent = 0, parentKey = '') {
         let html = '';
         if (Array.isArray(obj)) {
@@ -174,7 +176,11 @@ function drawNodes(nodesAndLinks) {
         } else if (typeof obj === 'object' && obj !== null) {
             for (const [objKey, value] of Object.entries(obj)) {
                 const currentKey = objKey === 'get_resource' ? parentKey : objKey;
-                if (currentKey !== 'template' && currentKey !== 'get_param' && currentKey !== 'user_data_format' && currentKey !== 'list_join') {
+                if (currentKey !== 'template' && 
+                    currentKey !== 'get_param' && 
+                    currentKey !== 'user_data_format' && 
+                    currentKey !== 'list_join' && 
+                    currentKey !== 'name') {
                     html += formatObject(value, currentKey, indent + 2, currentKey);
                 } else if (currentKey === 'list_join') {
                     html += formatObject(value, parentKey, indent + 2, parentKey);
