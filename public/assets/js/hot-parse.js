@@ -29,22 +29,14 @@ function handleFileSelect(event) {                      // Define a function to 
 const fileInput = document.getElementById("file-input");
 fileInput.addEventListener("change", handleFileSelect, false);
 
-
 function nodeMap(parsedContent) {
-    // Separate the parsed JSON or YAML heat templates into a node map.
-    // Requires: JSON or YAML
-    // Returns: A node map of the devices
     const root = { name: "openstack", type: "Root" };
     const nodes = [root];
     const links = [];
 
-    var title = "No Title Found...";
+    var title = parsedContent.parameters.range_id.default || parsedContent.description || "No Title Found...";
 
-    if (parsedContent.parameters.range_id) {
-        title = parsedContent.parameters.range_id.default;
-    } else if (parsedContent.description) {
-        title = parsedContent.description;
-    }
+    const sgNodes = [];
 
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
         const name = `${resourceName}`;
@@ -52,18 +44,25 @@ function nodeMap(parsedContent) {
         const data = resource.properties;
 
         const node = { name, type, data };
-        nodes.push(node);
+
+        if (type === 'SecurityGroup') {
+            sgNodes.push(node);
+        } else {
+            nodes.push(node);
+        }
 
         if (type === 'Router') {
             links.push({ source: node, target: root });
         }
     }
+
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
         const processProperty = (property, parentResourceName) => {
             if (typeof property === 'object') {
                 if (property['get_resource'] !== undefined) {
                     const target = nodes.find(n => n.name === parentResourceName);
-                    const source = nodes.find(n => n.name === property['get_resource']);
+                    const sourceName = property['get_resource'];
+                    const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
                     if (source.type !== 'Net' || target.type !== 'Port') {
                         links.push({ source, target });
                     }
@@ -78,6 +77,19 @@ function nodeMap(parsedContent) {
             processProperty(property, resourceName);
         }
     }
+
+    // Duplicate SecurityGroup nodes and update links
+    for (const sgNode of sgNodes) {
+        const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
+        const uniqueLinkedNodes = [...new Set(linkedNodes)];
+        for (const linkedNode of uniqueLinkedNodes) {
+            const newNode = { name: sgNode.name + '_' + linkedNode.name, type: 'SecurityGroup', data: sgNode.data };
+            nodes.push(newNode);
+            links.push({ source: linkedNode, target: newNode });
+        }
+        links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
+    }
+
     return { nodes, links, title };
 }
 
@@ -86,13 +98,15 @@ function drawNodes(nodesAndLinks) {
     //  Requires: A node map
     //  Returns: The network map the node map represents
 
+    console.log(nodesAndLinks);
+
     const nodes = nodesAndLinks.nodes;
     const links = nodesAndLinks.links;
     const title = nodesAndLinks.title;
 
     const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];
-    const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a', 
-                    '#003359 ', '#A5ACAF', '#3CB6CE', '#00AEEF', '#64A0C8', '#44D62C'];
+    const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a',
+        '#003359 ', '#A5ACAF', '#3CB6CE', '#00AEEF', '#64A0C8', '#44D62C'];
     const legendData = uniqueNodeTypes.map((type, i) => ({ type, color: colors[i] }));
 
     const colorScale = (function () {
@@ -109,7 +123,25 @@ function drawNodes(nodesAndLinks) {
 
     const force = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id))
-        .force("charge", d3.forceManyBody().strength(-1500))
+        .force("charge", d3.forceManyBody()
+            .strength(d => {
+                if (d.type === 'Root') {
+                    return -5000;
+                } else if (d.type === 'Router') {
+                    return -2500;
+                } else if (d.type === 'Server') {
+                    return -1500;
+                } else if (d.type === 'Subnet') {
+                    return -2000;
+                } else if (d.type === 'Net') {
+                    return -500;
+                } else if (d.type === 'SecurityGroup') {
+                    return -500;
+                } else {
+                    return -1000;
+                }
+            })
+        )
         .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
         .force("x", d3.forceX())
         .force("y", d3.forceY())
@@ -147,7 +179,21 @@ function drawNodes(nodesAndLinks) {
     const circles = svg.selectAll('circle')
         .data(nodes)
         .join('circle')
-        .attr('r', d => d.type == 'Root' ? 40 : 30)
+        .attr('r', d => {
+            if (d.type === 'Root') {
+                return 50;
+            } else if (d.type === 'Subnet') {
+                return 50;
+            } else if (d.type === 'Server') {
+                return 40;
+            } else if (d.type === 'Router') {
+                return 40;
+            } else if (d.type === 'SecurityGroup') {
+                return 20;
+            } else {
+                return 30;
+            }
+        })
         .attr('fill', d => colorScale(d.type))
         .on('mouseenter', (event, d) => {
             const tooltip = d3.select('.tooltip');
@@ -165,7 +211,7 @@ function drawNodes(nodesAndLinks) {
             tooltip.style('visibility', 'hidden');
         })
         .call(drag(force));
-        
+
     function formatObject(obj, key = '', indent = 0, parentKey = '') {
         let html = '';
         if (Array.isArray(obj)) {
@@ -176,10 +222,10 @@ function drawNodes(nodesAndLinks) {
         } else if (typeof obj === 'object' && obj !== null) {
             for (const [objKey, value] of Object.entries(obj)) {
                 const currentKey = objKey === 'get_resource' ? parentKey : objKey;
-                if (currentKey !== 'template' && 
-                    currentKey !== 'get_param' && 
-                    currentKey !== 'user_data_format' && 
-                    currentKey !== 'list_join' && 
+                if (currentKey !== 'template' &&
+                    currentKey !== 'get_param' &&
+                    currentKey !== 'user_data_format' &&
+                    currentKey !== 'list_join' &&
                     currentKey !== 'name') {
                     html += formatObject(value, currentKey, indent + 2, currentKey);
                 } else if (currentKey === 'list_join') {
@@ -200,9 +246,37 @@ function drawNodes(nodesAndLinks) {
         .text(d => d.name)
         .attr('fill', 'black')
         .attr('text-anchor', 'middle')
-        .attr('dy',  d => d.type == 'Root' ? 50 : 40)
+        .attr('dy', d => {
+            if (d.type === 'Root') {
+                return 60;
+            } else if (d.type === 'Subnet') {
+                return 60;
+            } else if (d.type === 'Server') {
+                return 50;
+            } else if (d.type === 'Router') {
+                return 50;
+            } else if (d.type === 'SecurityGroup') {
+                return 30;
+            } else {
+                return 40;
+            }
+        })
         .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', 12)
+        .style('font-size', d => {
+            if (d.type === 'Root') {
+                return 16;
+            } else if (d.type === 'Subnet') {
+                return 16;
+            } else if (d.type === 'Server') {
+                return 14;
+            } else if (d.type === 'Router') {
+                return 14;
+            } else if (d.type === 'SecurityGroup') {
+                return 10;
+            } else {
+                return 12;
+            }
+        })
         .style('pointer-events', 'none');
 
     const titleMaxWidth = window.innerWidth / 1.5;
