@@ -34,7 +34,13 @@ function nodeMap(parsedContent) {
     const nodes = [root];
     const links = [];
 
-    var title = parsedContent.parameters.range_id.default || parsedContent.description || "No Title Found...";
+    if (parsedContent.parameters.range_id) {
+        var title = parsedContent.parameters.range_id.default;
+    } else if (parsedContent.description) {
+        var title = parsedContent.description;
+    } else {
+        var title = "No Title Found...";
+    }
 
     const sgNodes = [];
 
@@ -98,11 +104,55 @@ function drawNodes(nodesAndLinks) {
     //  Requires: A node map
     //  Returns: The network map the node map represents
 
-    console.log(nodesAndLinks);
-
     const nodes = nodesAndLinks.nodes;
     const links = nodesAndLinks.links;
     const title = nodesAndLinks.title;
+
+    for (var node of nodes) {
+        node.info = formatObject(node.data);
+    }
+
+    function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
+        let html = '';
+        if (Array.isArray(obj)) {
+            obj.forEach((value) => {
+                if (value !== '' && value !== '.')
+                    html += formatObject(value, `${key}`, indent + 2, parentKey, result);
+            });
+        } else if (typeof obj === 'object' && obj !== null) {
+            for (const [objKey, value] of Object.entries(obj)) {
+                const currentKey = objKey === 'get_resource' ? parentKey : objKey;
+                if (currentKey !== 'template' &&
+                    currentKey !== 'get_param' &&
+                    currentKey !== 'user_data_format' &&
+                    currentKey !== 'list_join' &&
+                    currentKey !== 'name') {
+                    html += formatObject(value, currentKey, indent + 2, currentKey, result);
+                } else if (currentKey === 'list_join') {
+                    html += formatObject(value, parentKey, indent + 2, parentKey, result);
+                }
+            }
+        } else {
+            if (key !== '' && key !== undefined) {
+                if (result[key] === undefined) {
+                    result[key] = new Set();
+                }
+                result[key].add(obj);
+            }
+        }
+        if (key === '') {
+            for (const [resultKey, values] of Object.entries(result)) {
+                const distinctValues = Array.from(values).filter((value, index, array) => {
+                    return array.indexOf(value) === index;
+                });
+                html += `<strong>${resultKey}: </strong>${distinctValues.join(', ')}<br/>`;
+            }
+        }
+        return html;
+    }
+
+    const width = window.innerWidth
+    const height = window.innerHeight
 
     const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];
     const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a',
@@ -121,36 +171,34 @@ function drawNodes(nodesAndLinks) {
         };
     })();
 
+    const weights = {
+        'Root': 16,
+        'Router': 12,
+        'Server': 10,
+        'Subnet': 12,
+        'Net': 12,
+        'SecurityGroup': 6,
+        'Other': 8
+    };
+
     const force = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id))
         .force("charge", d3.forceManyBody()
-            .strength(d => {
-                if (d.type === 'Root') {
-                    return -5000;
-                } else if (d.type === 'Router') {
-                    return -2500;
-                } else if (d.type === 'Server') {
-                    return -1500;
-                } else if (d.type === 'Subnet') {
-                    return -2000;
-                } else if (d.type === 'Net') {
-                    return -500;
-                } else if (d.type === 'SecurityGroup') {
-                    return -500;
-                } else {
-                    return -1000;
-                }
-            })
-        )
-        .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
+            .strength(d => weights[d.type] * -100 || weights.Other * -100))
+        .force("center", d3.forceCenter(width / 2, height / 2))
         .force("x", d3.forceX())
         .force("y", d3.forceY())
         .on("tick", update);
 
+    const zoom = d3.zoom()
+        .scaleExtent([0.25, 4])
+        .on('zoom', zoomed);
+
     const svg = d3.select('body')
         .append('svg')
-        .attr('width', window.innerWidth)
-        .attr('height', window.innerHeight);
+        .attr('width', width)
+        .attr('height', height)
+        .call(zoom);
 
     const linksGroup = svg.append('g')
         .attr('stroke', '#333333')
@@ -158,6 +206,48 @@ function drawNodes(nodesAndLinks) {
         .selectAll('line')
         .data(links)
         .join('line');
+
+    const nodesGroup = svg.append('g')
+        .selectAll('circle')
+        .data(nodes)
+        .join('circle')
+        .attr('r', d => weights[d.type] * 2 || weights.Other * 2)
+        .attr('fill', d => colorScale(d.type))
+        .on('mouseenter', (event, d) => {
+            const tooltip = d3.select('.tooltip');
+            tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info}`);
+            tooltip.style('visibility', 'visible')
+                .style('text-align', 'left');
+        })
+        .on('mousemove', (event) => {
+            const tooltip = d3.select('.tooltip');
+            tooltip.style('top', (event.pageY + 10) + 'px');
+            tooltip.style('left', (event.pageX - (tooltip.node().getBoundingClientRect().width / 2)) + 'px');
+        })
+        .on('mouseleave', () => {
+            const tooltip = d3.select('.tooltip');
+            tooltip.style('visibility', 'hidden');
+        })
+        .call(drag(force));
+
+    const textGroup = svg.append('g')
+        .selectAll('text')
+        .data(nodes)
+        .join('text')
+        .text(d => d.name)
+        .attr('fill', 'black')
+        .attr('text-anchor', 'middle')
+        .attr('dy', d => weights[d.type] * 3 || weights.Other * 3)
+        .style('font-family', "Verdana, Helvetica, Sans-Serif")
+        .style('font-size', d => weights[d.type] * 1 || weights.Other * 1)
+        .style('pointer-events', 'none');
+
+    function zoomed(event) {
+        const { transform } = event;
+        linksGroup.attr('transform', transform);
+        nodesGroup.attr('transform', transform);
+        textGroup.attr('transform', transform);
+    }
 
     const tooltip = d3.select('body')
         .append('div')
@@ -174,116 +264,11 @@ function drawNodes(nodesAndLinks) {
         .style('max-width', '300px')
         .style('text-align', 'center');
 
-    console.log(nodes[1].data)
-
-    const circles = svg.selectAll('circle')
-        .data(nodes)
-        .join('circle')
-        .attr('r', d => {
-            if (d.type === 'Root') {
-                return 50;
-            } else if (d.type === 'Subnet') {
-                return 50;
-            } else if (d.type === 'Server') {
-                return 40;
-            } else if (d.type === 'Router') {
-                return 40;
-            } else if (d.type === 'SecurityGroup') {
-                return 20;
-            } else {
-                return 30;
-            }
-        })
-        .attr('fill', d => colorScale(d.type))
-        .on('mouseenter', (event, d) => {
-            const tooltip = d3.select('.tooltip');
-            tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${formatObject(d.data)}`);
-            tooltip.style('visibility', 'visible')
-                .style('text-align', 'left');
-        })
-        .on('mousemove', (event) => {
-            const tooltip = d3.select('.tooltip');
-            tooltip.style('top', (event.pageY + 10) + 'px');
-            tooltip.style('left', (event.pageX - (tooltip.node().getBoundingClientRect().width / 2)) + 'px');
-        })
-        .on('mouseleave', () => {
-            const tooltip = d3.select('.tooltip');
-            tooltip.style('visibility', 'hidden');
-        })
-        .call(drag(force));
-
-    function formatObject(obj, key = '', indent = 0, parentKey = '') {
-        let html = '';
-        if (Array.isArray(obj)) {
-            obj.forEach((value) => {
-                if (value !== '' && value !== '.')
-                    html += formatObject(value, `${key}`, indent + 2, parentKey);
-            });
-        } else if (typeof obj === 'object' && obj !== null) {
-            for (const [objKey, value] of Object.entries(obj)) {
-                const currentKey = objKey === 'get_resource' ? parentKey : objKey;
-                if (currentKey !== 'template' &&
-                    currentKey !== 'get_param' &&
-                    currentKey !== 'user_data_format' &&
-                    currentKey !== 'list_join' &&
-                    currentKey !== 'name') {
-                    html += formatObject(value, currentKey, indent + 2, currentKey);
-                } else if (currentKey === 'list_join') {
-                    html += formatObject(value, parentKey, indent + 2, parentKey);
-                }
-            }
-        } else {
-            if (key !== '' && key !== undefined) {
-                html += `<strong>${key}: </strong>${obj}<br/>`;
-            }
-        }
-        return html;
-    }
-
-    const names = svg.selectAll('text')
-        .data(nodes)
-        .join('text')
-        .text(d => d.name)
-        .attr('fill', 'black')
-        .attr('text-anchor', 'middle')
-        .attr('dy', d => {
-            if (d.type === 'Root') {
-                return 60;
-            } else if (d.type === 'Subnet') {
-                return 60;
-            } else if (d.type === 'Server') {
-                return 50;
-            } else if (d.type === 'Router') {
-                return 50;
-            } else if (d.type === 'SecurityGroup') {
-                return 30;
-            } else {
-                return 40;
-            }
-        })
-        .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', d => {
-            if (d.type === 'Root') {
-                return 16;
-            } else if (d.type === 'Subnet') {
-                return 16;
-            } else if (d.type === 'Server') {
-                return 14;
-            } else if (d.type === 'Router') {
-                return 14;
-            } else if (d.type === 'SecurityGroup') {
-                return 10;
-            } else {
-                return 12;
-            }
-        })
-        .style('pointer-events', 'none');
-
-    const titleMaxWidth = window.innerWidth / 1.5;
+    const titleMaxWidth = width / 1.5;
 
     const top = svg.append('text')
         .text(title)
-        .attr('x', window.innerWidth / 2)
+        .attr('x', width / 2)
         .attr('y', 30)
         .attr('fill', 'black')
         .attr('text-anchor', 'middle')
@@ -321,10 +306,10 @@ function drawNodes(nodesAndLinks) {
         .style("fill", "#333");
 
     function update() {
-        circles.attr('cx', d => d.x)
+        nodesGroup.attr('cx', d => d.x)
             .attr('cy', d => d.y);
 
-        names.attr('x', d => d.x)
+        textGroup.attr('x', d => d.x)
             .attr('y', d => d.y);
 
         linksGroup.attr('x1', d => d.source.x)
