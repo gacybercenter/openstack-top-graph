@@ -112,40 +112,64 @@ function drawNodes(nodesAndLinks) {
         node.info = formatObject(node.data);
     }
 
+    /**
+     * Converts an object to an HTML string representation, recursively.
+     * Duplicate values for a given key are separated by commas.
+     * @param {object} obj - the object to format
+     * @param {string} key - the key for the current object, defaults to empty string
+     * @param {number} indent - the indentation level, defaults to 0
+     * @param {string} parentKey - the key of the parent object, defaults to empty string
+     * @param {object} result - the object to store results, defaults to empty object
+     * @returns {string} - the HTML string representation of the object
+     */
     function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
         let html = '';
+        // if obj is an array, iterate over its elements and call formatObject recursively on each element
         if (Array.isArray(obj)) {
             obj.forEach((value) => {
-                if (value !== '' && value !== '.')
+                // ignore empty and dot values
+                if (value !== '' && value !== '.') {
                     html += formatObject(value, `${key}`, indent + 2, parentKey, result);
+                }
             });
+            // if obj is an object, iterate over its key-value pairs and call formatObject recursively on each value
         } else if (typeof obj === 'object' && obj !== null) {
             for (const [objKey, value] of Object.entries(obj)) {
+                // use parentKey as key for get_resource objects, otherwise use objKey as key
                 const currentKey = objKey === 'get_resource' ? parentKey : objKey;
-                if (currentKey !== 'template' &&
+                // ignore specific keys
+                if (
+                    currentKey !== 'template' &&
                     currentKey !== 'get_param' &&
                     currentKey !== 'user_data_format' &&
                     currentKey !== 'list_join' &&
-                    currentKey !== 'name') {
+                    currentKey !== 'name'
+                ) {
                     html += formatObject(value, currentKey, indent + 2, currentKey, result);
                 } else if (currentKey === 'list_join') {
+                    // for list_join, use parentKey as key
                     html += formatObject(value, parentKey, indent + 2, parentKey, result);
                 }
             }
+            // if obj is a primitive type, store it in the result object under the given key
         } else {
             if (key !== '' && key !== undefined) {
                 if (result[key] === undefined) {
-                    result[key] = new Set();
+                    result[key] = [];
                 }
-                result[key].add(obj);
+                result[key].push(obj);
             }
         }
+        // if key is empty, format the result object as an HTML string
         if (key === '') {
             for (const [resultKey, values] of Object.entries(result)) {
-                const distinctValues = Array.from(values).filter((value, index, array) => {
-                    return array.indexOf(value) === index;
-                });
-                html += `<strong>${resultKey}: </strong>${distinctValues.join(', ')}<br/>`;
+                // if there are multiple values for a given key, display them separated by commas
+                if (values.length > 1) {
+                    html += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
+                    // otherwise, display the single value
+                } else {
+                    html += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
+                }
             }
         }
         return html;
@@ -198,6 +222,7 @@ function drawNodes(nodesAndLinks) {
         .append('svg')
         .attr('width', width)
         .attr('height', height)
+        .attr("cursor", "crosshair")
         .call(zoom);
 
     const linksGroup = svg.append('g')
@@ -214,6 +239,7 @@ function drawNodes(nodesAndLinks) {
         .attr('r', d => weights[d.type] * 2 || weights.Other * 2)
         .attr('fill', d => colorScale(d.type))
         .on('mouseenter', (event, d) => {
+            svg.attr("cursor", "grab");
             const tooltip = d3.select('.tooltip');
             tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info}`);
             tooltip.style('visibility', 'visible')
@@ -225,6 +251,7 @@ function drawNodes(nodesAndLinks) {
             tooltip.style('left', (event.pageX - (tooltip.node().getBoundingClientRect().width / 2)) + 'px');
         })
         .on('mouseleave', () => {
+            svg.attr("cursor", "crosshair");
             const tooltip = d3.select('.tooltip');
             tooltip.style('visibility', 'hidden');
         })
@@ -321,20 +348,38 @@ function drawNodes(nodesAndLinks) {
     function drag(simulation) {
         function dragstarted(event) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
+            svg.attr("cursor", "grabbing");
             event.subject.fx = event.subject.x;
             event.subject.fy = event.subject.y;
         }
 
         function dragged(event) {
-            event.subject.fx = event.x;
-            event.subject.fy = event.y;
+            svg.attr("cursor", "grabbing");
+            const transform = d3.zoomTransform(svg.node());
+
+            // const [x0, y0] = [event.subject.x, event.subject.y];
+            const [x1, y1] = transform.invert([event.x, event.y]);
+
+            event.subject.fx = x1;
+            event.subject.fy = y1;
 
             const tooltip = d3.select('.tooltip');
             tooltip.style('visibility', 'hidden');
         }
 
+        // function dragged(event) {
+        //     svg.attr("cursor", "grabbing");
+        //     const current_scale = d3.zoomTransform(svg.node()).k;
+        //     event.subject.fx = event.x / current_scale;
+        //     event.subject.fy = event.y / current_scale;
+
+        //     const tooltip = d3.select('.tooltip');
+        //     tooltip.style('visibility', 'hidden');
+        // }
+
         function dragended(event) {
             if (!event.active) simulation.alphaTarget(0);
+            svg.attr("cursor", "crosshair");
             event.subject.fx = null;
             event.subject.fy = null;
         }
