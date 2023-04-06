@@ -239,7 +239,6 @@ function drawNodes(nodesAndLinks) {
         .attr('r', d => weights[d.type] * 2 || weights.Other * 2)
         .attr('fill', d => colorScale(d.type))
         .on('mouseenter', (event, d) => {
-            svg.attr("cursor", "grab");
             const tooltip = d3.select('.tooltip');
             tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info}`);
             tooltip.style('visibility', 'visible')
@@ -346,40 +345,44 @@ function drawNodes(nodesAndLinks) {
     }
 
     function drag(simulation) {
+        let x, y, dx, dy;
+
         function dragstarted(event) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
-            svg.attr("cursor", "grabbing");
-            event.subject.fx = event.subject.x;
-            event.subject.fy = event.subject.y;
+            svg.attr("cursor", "grab");
+
+            // Store the starting point of the drag
+            x = event.subject.x;
+            y = event.subject.y;
+
+            // Set the fixed coordinates of the node being dragged
+            event.subject.fx = x
+            event.subject.fy = y
         }
 
         function dragged(event) {
             svg.attr("cursor", "grabbing");
+
+            // Get the current zoom transform
             const transform = d3.zoomTransform(svg.node());
 
-            // const [x0, y0] = [event.subject.x, event.subject.y];
-            const [x1, y1] = transform.invert([event.x, event.y]);
+            // Get the change from the initial position with respect to the zoom
+            dx = transform.invertX(event.x) - transform.invertX(x);
+            dy = transform.invertY(event.y) - transform.invertY(y);
 
-            event.subject.fx = x1;
-            event.subject.fy = y1;
+            // Update the fixed coordinates of the node being dragged
+            event.subject.fx = x + dx;
+            event.subject.fy = y + dy;
 
-            const tooltip = d3.select('.tooltip');
-            tooltip.style('visibility', 'hidden');
+            const tooltip = d3.select(".tooltip");
+            tooltip.style("visibility", "hidden");
         }
-
-        // function dragged(event) {
-        //     svg.attr("cursor", "grabbing");
-        //     const current_scale = d3.zoomTransform(svg.node()).k;
-        //     event.subject.fx = event.x / current_scale;
-        //     event.subject.fy = event.y / current_scale;
-
-        //     const tooltip = d3.select('.tooltip');
-        //     tooltip.style('visibility', 'hidden');
-        // }
 
         function dragended(event) {
             if (!event.active) simulation.alphaTarget(0);
             svg.attr("cursor", "crosshair");
+
+            // Clear the fixed coordinates of the node being dragged
             event.subject.fx = null;
             event.subject.fy = null;
         }
