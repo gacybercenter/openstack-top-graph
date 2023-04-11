@@ -33,6 +33,7 @@ function nodeMap(parsedContent) {
     const root = { name: "openstack", type: "Root" };
     const nodes = [root];
     const links = [];
+    const sgNodes = [];
 
     if (parsedContent.parameters.range_id) {
         var title = parsedContent.parameters.range_id.default;
@@ -41,8 +42,6 @@ function nodeMap(parsedContent) {
     } else {
         var title = "No Title Found...";
     }
-
-    const sgNodes = [];
 
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
         const name = `${resourceName}`;
@@ -88,14 +87,18 @@ function nodeMap(parsedContent) {
     for (const sgNode of sgNodes) {
         const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
         const uniqueLinkedNodes = [...new Set(linkedNodes)];
-        for (const linkedNode of uniqueLinkedNodes) {
-            const newNode = { name: sgNode.name + '_' + linkedNode.name, type: 'SecurityGroup', data: sgNode.data };
+        if (uniqueLinkedNodes.length === 0) {
+            const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
             nodes.push(newNode);
-            links.push({ source: linkedNode, target: newNode });
+        } else {
+            for (const linkedNode of uniqueLinkedNodes) {
+                const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
+                nodes.push(newNode);
+                links.push({ source: linkedNode, target: newNode });
+            }
+            links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
         }
-        links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
     }
-
     return { nodes, links, title };
 }
 
@@ -103,14 +106,6 @@ function drawNodes(nodesAndLinks) {
     //  Draws a network diagram from a node map.
     //  Requires: A node map
     //  Returns: The network map the node map represents
-
-    const nodes = nodesAndLinks.nodes;
-    const links = nodesAndLinks.links;
-    const title = nodesAndLinks.title;
-
-    for (var node of nodes) {
-        node.info = formatObject(node.data);
-    }
 
     /**
      * Converts an object to an HTML string representation, recursively.
@@ -175,6 +170,13 @@ function drawNodes(nodesAndLinks) {
         return html;
     }
 
+    const nodes = nodesAndLinks.nodes;
+    const links = nodesAndLinks.links;
+    const title = nodesAndLinks.title;
+
+    for (var node of nodes) {
+        node.info = formatObject(node.data);
+    }
     const width = window.innerWidth
     const height = window.innerHeight
 
@@ -196,8 +198,8 @@ function drawNodes(nodesAndLinks) {
     })();
 
     const weights = {
-        'Root': 16,
-        'Router': 12,
+        'Root': 10,
+        'Router': 14,
         'Server': 10,
         'Subnet': 12,
         'Net': 12,
@@ -226,11 +228,12 @@ function drawNodes(nodesAndLinks) {
         .call(zoom);
 
     const linksGroup = svg.append('g')
-        .attr('stroke', '#333333')
         .attr('stroke-width', 2)
         .selectAll('line')
         .data(links)
-        .join('line');
+        .join('line')
+        .attr('stroke', d => colorScale(d.source.type))
+        .attr("stroke-opacity", 0.75);
 
     const nodesGroup = svg.append('g')
         .selectAll('circle')
@@ -273,6 +276,7 @@ function drawNodes(nodesAndLinks) {
         linksGroup.attr('transform', transform);
         nodesGroup.attr('transform', transform);
         textGroup.attr('transform', transform);
+        perimeter.attr('transform', transform);
     }
 
     const tooltip = d3.select('body')
@@ -290,7 +294,7 @@ function drawNodes(nodesAndLinks) {
         .style('max-width', '300px')
         .style('text-align', 'center');
 
-    const titleMaxWidth = width / 1.5;
+    const titleMaxWidth = width / 1.25;
 
     const top = svg.append('text')
         .text(title)
@@ -331,17 +335,43 @@ function drawNodes(nodesAndLinks) {
         .style("font-size", "16px")
         .style("fill", "#333");
 
+    function drawPerimeter() {
+        const subnetNodes = nodes.filter(node => node.type === "Subnet");
+        const linkedNodes = nodes.filter(node => links.some(link => subnetNodes.some(subnet => subnet.id === link.source.id || subnet.id === link.target.id) && (node.id === link.source.id || node.id === link.target.id)));
+        const perimeterNodes = [...subnetNodes, ...linkedNodes];
+        const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));
+
+        if (!hull) { perimeter.attr("d", ""); return; }
+
+        const padding = 30;
+        const corners = hull.length;
+        const expandedHull = hull.map((point, i) => {
+            const [x1, y1] = point;
+            const [x2, y2] = hull[(i + 1) % corners];
+            const angle = Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2;
+            const xOffset = padding * Math.cos(angle);
+            const yOffset = padding * Math.sin(angle);
+            return [x1 + xOffset, y1 + yOffset];
+        });
+        perimeter.attr("d", `M${expandedHull.join("L")}Z`);
+    }
+
+    const perimeter = svg.append('path')
+        .attr('stroke', '#FF0000')
+        .attr('stroke-width', 2)
+        .attr('fill', '#FF0000')
+        .attr('fill-opacity', 0.1);
+
     function update() {
         nodesGroup.attr('cx', d => d.x)
             .attr('cy', d => d.y);
-
         textGroup.attr('x', d => d.x)
             .attr('y', d => d.y);
-
         linksGroup.attr('x1', d => d.source.x)
             .attr('y1', d => d.source.y)
             .attr('x2', d => d.target.x)
             .attr('y2', d => d.target.y);
+        drawPerimeter();
     }
 
     function drag(simulation) {
