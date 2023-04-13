@@ -200,17 +200,21 @@ function drawNodes(nodesAndLinks) {
     const weights = {
         'Root': 10,
         'Router': 14,
-        'Server': 10,
-        'Subnet': 12,
+        'Server': 12,
+        'Subnet': 16,
         'Net': 12,
-        'SecurityGroup': 6,
+        'RouterInterface': 6,
+        'Port': 7,
+        'SecurityGroup': 5,
+        'ResourceGroup': 5,
+        'FloatingIPAssociation': 5,
         'Other': 8
     };
 
     const force = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id))
         .force("charge", d3.forceManyBody()
-            .strength(d => weights[d.type] * -100 || weights.Other * -100))
+            .strength(d => weights[d.type] * -120 || weights.Other * -120))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("x", d3.forceX())
         .force("y", d3.forceY())
@@ -227,11 +231,42 @@ function drawNodes(nodesAndLinks) {
         .attr("cursor", "crosshair")
         .call(zoom);
 
+    const subnetGroups = svg.selectAll('.subnet-group')
+        .data(nodes.filter(d => d.type === 'Subnet'))
+        .join('g')
+        .attr('class', 'subnet-group');
+
+    const perimeterPaths = subnetGroups.selectAll('.perimeter-path')
+        .data(d => [d]) // bind each subnet node to its own group
+        .join('path')
+        .attr('class', 'perimeter-path')
+        .attr('fill', d => colorScale(d.type))
+        .attr('fill-opacity', 0.2)
+
+    function drawPerimeter(subnetNode) {
+        const linkedNodes = nodes.filter(node =>
+            node !== subnetNode &&
+            links.some(link =>
+                (subnetNode === link.source && node === link.target) ||
+                (subnetNode === link.target && node === link.source)
+            )
+        );
+        const perimeterNodes = [subnetNode, ...linkedNodes];
+        const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));
+
+        if (!hull) {
+            perimeterPaths.filter(d => d === subnetNode).attr("d", "");
+            return;
+        }
+        const expandedHull = hull.map((point) => { return point; });
+        perimeterPaths.filter(d => d === subnetNode).attr("d", `M${expandedHull.join("L")}Z`);
+    }
+
     const linksGroup = svg.append('g')
-        .attr('stroke-width', 2)
         .selectAll('line')
         .data(links)
         .join('line')
+        .attr('stroke-width', 2)
         .attr('stroke', d => colorScale(d.source.type))
         .attr("stroke-opacity", 0.75);
 
@@ -273,10 +308,11 @@ function drawNodes(nodesAndLinks) {
 
     function zoomed(event) {
         const { transform } = event;
+
+        subnetGroups.attr('transform', transform);
         linksGroup.attr('transform', transform);
         nodesGroup.attr('transform', transform);
         textGroup.attr('transform', transform);
-        perimeter.attr('transform', transform);
     }
 
     const tooltip = d3.select('body')
@@ -335,33 +371,6 @@ function drawNodes(nodesAndLinks) {
         .style("font-size", "16px")
         .style("fill", "#333");
 
-    function drawPerimeter() {
-        const subnetNodes = nodes.filter(node => node.type === "Subnet");
-        const linkedNodes = nodes.filter(node => links.some(link => subnetNodes.some(subnet => subnet.id === link.source.id || subnet.id === link.target.id) && (node.id === link.source.id || node.id === link.target.id)));
-        const perimeterNodes = [...subnetNodes, ...linkedNodes];
-        const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));
-
-        if (!hull) { perimeter.attr("d", ""); return; }
-
-        const padding = 30;
-        const corners = hull.length;
-        const expandedHull = hull.map((point, i) => {
-            const [x1, y1] = point;
-            const [x2, y2] = hull[(i + 1) % corners];
-            const angle = Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2;
-            const xOffset = padding * Math.cos(angle);
-            const yOffset = padding * Math.sin(angle);
-            return [x1 + xOffset, y1 + yOffset];
-        });
-        perimeter.attr("d", `M${expandedHull.join("L")}Z`);
-    }
-
-    const perimeter = svg.append('path')
-        .attr('stroke', '#FF0000')
-        .attr('stroke-width', 2)
-        .attr('fill', '#FF0000')
-        .attr('fill-opacity', 0.1);
-
     function update() {
         nodesGroup.attr('cx', d => d.x)
             .attr('cy', d => d.y);
@@ -371,7 +380,10 @@ function drawNodes(nodesAndLinks) {
             .attr('y1', d => d.source.y)
             .attr('x2', d => d.target.x)
             .attr('y2', d => d.target.y);
-        drawPerimeter();
+
+        subnetGroups.each(function (d) {
+            drawPerimeter(d);
+        });
     }
 
     function drag(simulation) {
