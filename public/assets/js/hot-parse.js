@@ -144,6 +144,8 @@ function drawNodes(nodesAndLinks) {
                 } else if (currentKey === 'list_join') {
                     // for list_join, use parentKey as key
                     html += formatObject(value, parentKey, indent + 2, parentKey, result);
+                } else if (currentKey === "ip_address") {
+                    obj.ip = value
                 }
             }
             // if obj is a primitive type, store it in the result object under the given key
@@ -170,13 +172,36 @@ function drawNodes(nodesAndLinks) {
         return html;
     }
 
+    function IpFromHtml(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        let ip = '';
+
+        const strongElements = doc.querySelectorAll('strong');
+        strongElements.forEach((el) => {
+            if (el.textContent.includes('ip_address')) {
+                ip = el.nextSibling.textContent.trim();
+            } else if (el.textContent.includes('fixed_ip')) {
+                ip = el.nextSibling.textContent.trim();
+            } else if (el.textContent.includes('cidr')) {
+                ip = el.nextSibling.textContent.trim();
+            }
+        });
+        return ip;
+    }
+
     const nodes = nodesAndLinks.nodes;
     const links = nodesAndLinks.links;
     const title = nodesAndLinks.title;
 
     for (var node of nodes) {
         node.info = formatObject(node.data);
+        node.ip = IpFromHtml(node.info);
+
+        console.log(node.ip);
     }
+
     const width = window.innerWidth
     const height = window.innerHeight
 
@@ -203,10 +228,10 @@ function drawNodes(nodesAndLinks) {
         'Server': 12,
         'Subnet': 16,
         'Net': 12,
-        'RouterInterface': 6,
+        'RouterInterface': 7,
         'Port': 7,
         'SecurityGroup': 5,
-        'ResourceGroup': 5,
+        'ResourceGroup': 7,
         'FloatingIPAssociation': 5,
         'Other': 8
     };
@@ -243,23 +268,40 @@ function drawNodes(nodesAndLinks) {
         .attr('fill', d => colorScale(d.type))
         .attr('fill-opacity', 0.2)
 
-    function drawPerimeter(subnetNode) {
-        const linkedNodes = nodes.filter(node =>
-            node !== subnetNode &&
-            links.some(link =>
-                (subnetNode === link.source && node === link.target) ||
-                (subnetNode === link.target && node === link.source)
-            )
-        );
+    function drawPerimeter(subnetNode, depth = 3, paddingAngle = 20) {
+        const linkedNodes = getLinkedNodes(subnetNode, depth);
         const perimeterNodes = [subnetNode, ...linkedNodes];
         const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));
-
         if (!hull) {
             perimeterPaths.filter(d => d === subnetNode).attr("d", "");
             return;
         }
-        const expandedHull = hull.map((point) => { return point; });
-        perimeterPaths.filter(d => d === subnetNode).attr("d", `M${expandedHull.join("L")}Z`);
+        const centroid = d3.polygonCentroid(hull);
+        const paddedHull = hull.map(point => {
+            const angle = Math.atan2(point[1] - centroid[1], point[0] - centroid[0]);
+            return [
+                point[0] + paddingAngle * Math.cos(angle),
+                point[1] + paddingAngle * Math.sin(angle)
+            ];
+        });
+        const expandedHull = paddedHull.map(point => point.join(',')).join(' ');
+        perimeterPaths.filter(d => d === subnetNode).attr("d", `M${expandedHull}Z`);
+        function getLinkedNodes(node, depth) {
+            if (depth === 0) return [];
+            const linked = nodes.filter(n =>
+                n !== node &&
+                links.some(link =>
+                    (node === link.source && n === link.target)
+                )
+            );
+            return linked.reduce((result, n) => {
+                if (!result.includes(n)) {
+                    result.push(n);
+                    result = result.concat(getLinkedNodes(n, depth - 1));
+                }
+                return result;
+            }, []);
+        }
     }
 
     const linksGroup = svg.append('g')
@@ -303,8 +345,8 @@ function drawNodes(nodesAndLinks) {
         .attr('text-anchor', 'middle')
         .attr('dy', d => weights[d.type] * 3 || weights.Other * 3)
         .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', d => weights[d.type] * 1 || weights.Other * 1)
-        .style('pointer-events', 'none');
+        .style('font-size', d => weights[d.type] * 1.1 || weights.Other * 1.1)
+        .style('pointer-events', 'none')
 
     function zoomed(event) {
         const { transform } = event;
@@ -359,7 +401,7 @@ function drawNodes(nodesAndLinks) {
         .attr("y", (d, i) => i * 30 + 0)
         .attr("width", 20)
         .attr("height", 20)
-        .attr("fill", d => d.color)
+        .attr("fill", d => d.color);
 
     legend.selectAll("text")
         .data(legendData)
@@ -371,19 +413,60 @@ function drawNodes(nodesAndLinks) {
         .style("font-size", "16px")
         .style("fill", "#333");
 
+    var was_locked = false;
+    function toggleLock() {
+        nodesGroup.each(function (d) {
+            d.locked = !d.locked;
+            if (d.locked) {
+                d.fx = d.x;
+                d.fy = d.y;
+            } else {
+                d.fx = null;
+                d.fy = null;
+            }
+        });
+        if (force) {
+            force.alphaTarget(0.1).restart();
+        }
+    }
+
     function update() {
         nodesGroup.attr('cx', d => d.x)
             .attr('cy', d => d.y);
+
         textGroup.attr('x', d => d.x)
-            .attr('y', d => d.y);
+            .attr('y', d => d.y)
+            .text(d => {
+                if (ips) {
+                    return d.ip;
+                } else {
+                    return d.name;
+                }
+            });
+
         linksGroup.attr('x1', d => d.source.x)
             .attr('y1', d => d.source.y)
             .attr('x2', d => d.target.x)
             .attr('y2', d => d.target.y);
 
-        subnetGroups.each(function (d) {
-            drawPerimeter(d);
-        });
+        if (was_locked !== locked) {
+            toggleLock();
+            was_locked = locked;
+        }
+
+        if (subnet) {
+            subnetGroups.each(function (d) {
+                drawPerimeter(d);
+            });
+            if (force) {
+                force.alphaTarget(0.1).restart();
+            }
+        } else {
+            perimeterPaths.attr("d", "");
+            if (force) {
+                force.alphaTarget(0.1).restart();
+            }
+        }
     }
 
     function drag(simulation) {
@@ -393,26 +476,21 @@ function drawNodes(nodesAndLinks) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             svg.attr("cursor", "grab");
 
-            // Store the starting point of the drag
             x = event.subject.x;
             y = event.subject.y;
 
-            // Set the fixed coordinates of the node being dragged
-            event.subject.fx = x
-            event.subject.fy = y
+            event.subject.fx = x;
+            event.subject.fy = y;
         }
 
         function dragged(event) {
             svg.attr("cursor", "grabbing");
 
-            // Get the current zoom transform
             const transform = d3.zoomTransform(svg.node());
 
-            // Get the change from the initial position with respect to the zoom
             dx = transform.invertX(event.x) - transform.invertX(x);
             dy = transform.invertY(event.y) - transform.invertY(y);
 
-            // Update the fixed coordinates of the node being dragged
             event.subject.fx = x + dx;
             event.subject.fy = y + dy;
 
@@ -424,9 +502,10 @@ function drawNodes(nodesAndLinks) {
             if (!event.active) simulation.alphaTarget(0);
             svg.attr("cursor", "crosshair");
 
-            // Clear the fixed coordinates of the node being dragged
-            event.subject.fx = null;
-            event.subject.fy = null;
+            if (!locked) {
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
         }
 
         return d3.drag()
