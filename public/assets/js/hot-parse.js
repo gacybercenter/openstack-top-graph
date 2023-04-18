@@ -198,8 +198,6 @@ function drawNodes(nodesAndLinks) {
     for (var node of nodes) {
         node.info = formatObject(node.data);
         node.ip = IpFromHtml(node.info);
-
-        console.log(node.ip);
     }
 
     const width = window.innerWidth
@@ -222,24 +220,44 @@ function drawNodes(nodesAndLinks) {
         };
     })();
 
+
+    // https://vecta.io/symbols/241/cisco-network-topology-icons-black-and-white
+    const pictures = {
+        'Root': "https://symbols.getvecta.com/stencil_241/113_gatekeeper.f0eb77a73a.svg",
+        'Net': "https://symbols.getvecta.com/stencil_241/292_web-cluster.2e65dd1db3.svg",
+        'Subnet': "https://symbols.getvecta.com/stencil_241/78_cloud.271ac2c149.svg",
+        'Router': "https://symbols.getvecta.com/stencil_241/224_router.be30fb87e7.svg",
+        'RouterInterface': "https://symbols.getvecta.com/stencil_241/165_mau.f0621db6a3.svg",
+        'Server': "https://symbols.getvecta.com/stencil_241/109_file-server.0889a505f2.svg",
+        'Port': "https://symbols.getvecta.com/stencil_241/178_modem.90363b409e.svg",
+        'FloatingIP': "https://symbols.getvecta.com/stencil_241/74_ciscoca.106568a1a9.svg",
+        'FloatingIPAssociation': "https://symbols.getvecta.com/stencil_241/287_vpn-gateway.4c256282ec.svg",
+        'ResourceGroup': "https://symbols.getvecta.com/stencil_241/301_workgroup-director.1c23900b49.svg",
+        'SecurityGroup': "https://symbols.getvecta.com/stencil_241/151_key.713f0682bf.svg",
+        'Firewall': "https://symbols.getvecta.com/stencil_241/110_firewall.e262f4364e.svg",
+        'Other': "https://symbols.getvecta.com/stencil_241/265_terminal.a18d4445ed.svg"
+    }
+
     const weights = {
         'Root': 10,
-        'Router': 14,
-        'Server': 12,
-        'Subnet': 16,
         'Net': 12,
+        'Subnet': 16,
+        'Router': 14,
         'RouterInterface': 7,
+        'Server': 12,
         'Port': 7,
-        'SecurityGroup': 5,
-        'ResourceGroup': 7,
+        'FloatingIP': 8,
         'FloatingIPAssociation': 5,
+        'ResourceGroup': 7,
+        'SecurityGroup': 5,
+        'Firewall': 10,
         'Other': 8
     };
 
     const force = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id))
         .force("charge", d3.forceManyBody()
-            .strength(d => weights[d.type] * -120 || weights.Other * -120))
+            .strength(d => weights[d.type] * -150 || weights.Other * -150))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("x", d3.forceX())
         .force("y", d3.forceY())
@@ -316,7 +334,7 @@ function drawNodes(nodesAndLinks) {
         .selectAll('circle')
         .data(nodes)
         .join('circle')
-        .attr('r', d => weights[d.type] * 2 || weights.Other * 2)
+        .attr('r', d => weights[d.type] * 2.5 || weights.Other * 2.5)
         .attr('fill', d => colorScale(d.type))
         .on('mouseenter', (event, d) => {
             const tooltip = d3.select('.tooltip');
@@ -336,6 +354,17 @@ function drawNodes(nodesAndLinks) {
         })
         .call(drag(force));
 
+    const imageGroup = svg.append('g')
+        .selectAll('image')
+        .data(nodes)
+        .join('image')
+        .attr('xlink:href', d => pictures[d.type] || pictures.Other)
+        .attr('width', d => weights[d.type] * 4 || weights.Other * 4)
+        .attr('height', d => weights[d.type] * 4 || weights.Other * 4)
+        .attr('x', d => d.x - weights[d.type] * 2 || d.x - weights.Other * 2)
+        .attr('y', d => d.y - weights[d.type] * 2 || d.y - weights.Other * 2)
+        .style('pointer-events', 'none');
+
     const textGroup = svg.append('g')
         .selectAll('text')
         .data(nodes)
@@ -343,10 +372,10 @@ function drawNodes(nodesAndLinks) {
         .text(d => d.name)
         .attr('fill', 'black')
         .attr('text-anchor', 'middle')
-        .attr('dy', d => weights[d.type] * 3 || weights.Other * 3)
+        .attr('dy', d => weights[d.type] * 4 || weights.Other * 4)
         .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', d => weights[d.type] * 1.1 || weights.Other * 1.1)
-        .style('pointer-events', 'none')
+        .style('font-size', d => weights[d.type] * 1.25 || weights.Other * 1.25)
+        .style('pointer-events', 'none');
 
     function zoomed(event) {
         const { transform } = event;
@@ -354,6 +383,7 @@ function drawNodes(nodesAndLinks) {
         subnetGroups.attr('transform', transform);
         linksGroup.attr('transform', transform);
         nodesGroup.attr('transform', transform);
+        imageGroup.attr('transform', transform);
         textGroup.attr('transform', transform);
     }
 
@@ -433,6 +463,9 @@ function drawNodes(nodesAndLinks) {
     function update() {
         nodesGroup.attr('cx', d => d.x)
             .attr('cy', d => d.y);
+
+        imageGroup.attr('x', d => d.x - weights[d.type] * 2 || d.x - weights.Other * 2)
+            .attr('y', d => d.y - weights[d.type] * 2 || d.y - weights.Other * 2);
 
         textGroup.attr('x', d => d.x)
             .attr('y', d => d.y)
