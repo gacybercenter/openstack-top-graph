@@ -1,97 +1,108 @@
-function handleFileSelect(event) {                      // Define a function to handle file selection.
+/**
+ * Processes files inputed into the file container.
+ * Can process YAML and JSON Heat Template files.
+ * Turns a Heat Template into an interactive topological network graph
+ * @param {object} event - The inputted JAML or JSON Heat Template
+ */
+function handleFileSelect(event) {                                                      // Define a function to handle file selection.
 
-    const file = event.target.files[0];                 // Get the selected file.
+    const file = event.target.files[0];                                                 // Get the selected file.
 
-    const isYaml = file.name.endsWith(".yaml")          // Check if the file is in YAML or JSON format.
+    const isYaml = file.name.endsWith(".yaml")                                          // Check if the file is in YAML or JSON format.
         || file.name.endsWith(".yml");
     const fileType = isYaml ? "yaml" : "json";
 
-    const reader = new FileReader();                    // Create a new FileReader object to read the contents of the file.
+    const reader = new FileReader();                                                    // Create a new FileReader object to read the contents of the file.
 
-    reader.onload = function (event) {                  // Set up a callback function to handle the file load event.
+    reader.onload = function (event) {                                                  // Set up a callback function to handle the file load event.
         try {
-            const fileContent = event.target.result;    // Get the file contents from the FileReader object.
-            const parsedContent = fileType === "yaml"   // Parse the file contents based on the file type.
+            const fileContent = event.target.result;                                    // Get the file contents from the FileReader object.
+            const parsedContent = fileType === "yaml"                                   // Parse the file contents based on the file type.
                 ? jsyaml.load(fileContent)
                 : JSON.parse(fileContent);
 
-            nodesAndLinks = nodeMap(parsedContent);     // Construct a node map based on the parsed content.
+            nodesAndLinks = nodeMap(parsedContent);                                     // Construct a node map based on the parsed content.
 
             drawNodes(nodesAndLinks);
 
-            // console.log(parsedContent);                 // Log the parsed content to the console for debugging purposes.
-        } catch (error) {                               // If there was an error parsing the file, log the error to the console.
+        } catch (error) {                                                               // If there was an error parsing the file, log the error to the console.
             console.error(`Error parsing ${fileType} file: ${error}`);
         }
     };
-    reader.readAsText(file, "UTF-8");                   // Read the file as text using UTF-8 encoding.
+    reader.readAsText(file, "UTF-8");                                                   // Read the file as text using UTF-8 encoding.
 }
 const fileInput = document.getElementById("file-input");
 fileInput.addEventListener("change", handleFileSelect, false);
 
+/**
+ * Parses through the data extracting information like: nodes, links, and the title.
+ * It also duplicates attached security groups and adds a root node.
+ * @param {object} parsedContent - the parsed JAML or JSON
+ * @returns {object} - the { nodes, links, and title }
+ */
 function nodeMap(parsedContent) {
-    const root = { name: "openstack", type: "Root" };
-    const nodes = [root];
-    const links = [];
-    const sgNodes = [];
 
-    if (parsedContent.parameters.range_id) {
+    const root = { name: "openstack", type: "Root" };                                   // Creates the root node
+    const nodes = [root];                                                               // Creates an array for nodes and adds the root node
+    const links = [];                                                                   // Creates an array for links
+    const sgNodes = [];                                                                 // Creates an array for duplicate security group nodes
+
+    if (parsedContent.parameters.range_id) {                                            // Set the title to the default key value
         var title = parsedContent.parameters.range_id.default;
-    } else if (parsedContent.description) {
+    } else if (parsedContent.description) {                                             // Otherwise, Set the title to the description key value
         var title = parsedContent.description;
-    } else {
+    } else {                                                                            // If no title found: Set the title to a custom message
         var title = "No Title Found...";
     }
 
-    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
-        const name = `${resourceName}`;
-        const type = resource.type.split("::")[2];
-        const data = resource.properties;
+    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Itterate through all of the resources
+        const name = `${resourceName}`;                                                 // Store the name
+        const type = resource.type.split("::")[2];                                      // Store the type
+        const data = resource.properties;                                               // Store the data (properties)
 
-        const node = { name, type, data };
+        const node = { name, type, data };                                              // Create a node object using { name, type, data }
 
-        if (type === 'SecurityGroup') {
+        if (type === 'SecurityGroup') {                                                 // Add SecurityGroup nodes to the sgNodes array
             sgNodes.push(node);
-        } else {
+        } else {                                                                        // Add all other nodes to the nodes array
             nodes.push(node);
         }
 
-        if (type === 'Router') {
+        if (type === 'Router') {                                                        // Attach all routers to the root node
             links.push({ source: node, target: root });
         }
     }
 
-    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
-        const processProperty = (property, parentResourceName) => {
+    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Iterate through all resources
+        const processProperty = (property, parentResourceName) => {                     // Add links between nodes based on what resources they get
             if (typeof property === 'object') {
                 if (property['get_resource'] !== undefined) {
                     const target = nodes.find(n => n.name === parentResourceName);
                     const sourceName = property['get_resource'];
                     const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
-                    if (source.type !== 'Net' || target.type !== 'Port') {
+                    if (source.type !== 'Net' || target.type !== 'Port') {              // Filter out all Net to Port links
                         links.push({ source, target });
                     }
                 }
-                for (const [key, value] of Object.entries(property)) {
+                for (const [key, value] of Object.entries(property)) {                  // For each key, recurse the link finding process
                     processProperty(value, parentResourceName);
                 }
             }
         }
 
-        for (const [propertyName, property] of Object.entries(resource.properties)) {
+        for (const [propertyName, property] of Object.entries(resource.properties)) {   // For each object, recurse the link finding process
             processProperty(property, resourceName);
         }
     }
 
-    // Duplicate SecurityGroup nodes and update links
-    for (const sgNode of sgNodes) {
+    for (const sgNode of sgNodes) {                                                     // Duplicate linked SecurityGroup nodes
         const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
         const uniqueLinkedNodes = [...new Set(linkedNodes)];
         if (uniqueLinkedNodes.length === 0) {
             const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
             nodes.push(newNode);
         } else {
-            for (const linkedNode of uniqueLinkedNodes) {
+            for (const linkedNode of uniqueLinkedNodes) {                               // Link duplicate SecurityGroup nodes
                 const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
                 nodes.push(newNode);
                 links.push({ source: linkedNode, target: newNode });
@@ -102,113 +113,32 @@ function nodeMap(parsedContent) {
     return { nodes, links, title };
 }
 
+
+/**
+ * Takes in a an object of nodes, links, and titles.
+ * Generates a node map using d3 v7 and html.
+ * @param {object} nodesAndLinks - The { nodes, links, and title }
+ */
 function drawNodes(nodesAndLinks) {
-    //  Draws a network diagram from a node map.
-    //  Requires: A node map
-    //  Returns: The network map the node map represents
 
-    /**
-     * Converts an object to an HTML string representation, recursively.
-     * Duplicate values for a given key are separated by commas.
-     * @param {object} obj - the object to format
-     * @param {string} key - the key for the current object, defaults to empty string
-     * @param {number} indent - the indentation level, defaults to 0
-     * @param {string} parentKey - the key of the parent object, defaults to empty string
-     * @param {object} result - the object to store results, defaults to empty object
-     * @returns {string} - the HTML string representation of the object
-     */
-    function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
-        let html = '';
-        // if obj is an array, iterate over its elements and call formatObject recursively on each element
-        if (Array.isArray(obj)) {
-            obj.forEach((value) => {
-                // ignore empty and dot values
-                if (value !== '' && value !== '.') {
-                    html += formatObject(value, `${key}`, indent + 2, parentKey, result);
-                }
-            });
-            // if obj is an object, iterate over its key-value pairs and call formatObject recursively on each value
-        } else if (typeof obj === 'object' && obj !== null) {
-            for (const [objKey, value] of Object.entries(obj)) {
-                // use parentKey as key for get_resource objects, otherwise use objKey as key
-                const currentKey = objKey === 'get_resource' ? parentKey : objKey;
-                // ignore specific keys
-                if (
-                    currentKey !== 'template' &&
-                    currentKey !== 'get_param' &&
-                    currentKey !== 'user_data_format' &&
-                    currentKey !== 'list_join' &&
-                    currentKey !== 'name'
-                ) {
-                    html += formatObject(value, currentKey, indent + 2, currentKey, result);
-                } else if (currentKey === 'list_join') {
-                    // for list_join, use parentKey as key
-                    html += formatObject(value, parentKey, indent + 2, parentKey, result);
-                } else if (currentKey === "ip_address") {
-                    obj.ip = value
-                }
-            }
-            // if obj is a primitive type, store it in the result object under the given key
-        } else {
-            if (key !== '' && key !== undefined) {
-                if (result[key] === undefined) {
-                    result[key] = [];
-                }
-                result[key].push(obj);
-            }
-        }
-        // if key is empty, format the result object as an HTML string
-        if (key === '') {
-            for (const [resultKey, values] of Object.entries(result)) {
-                // if there are multiple values for a given key, display them separated by commas
-                if (values.length > 1) {
-                    html += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
-                    // otherwise, display the single value
-                } else {
-                    html += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
-                }
-            }
-        }
-        return html;
-    }
-
-    function IpFromHtml(html) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-
-        let ip = '';
-
-        const strongElements = doc.querySelectorAll('strong');
-        strongElements.forEach((el) => {
-            if (el.textContent.includes('ip_address')) {
-                ip = el.nextSibling.textContent.trim();
-            } else if (el.textContent.includes('fixed_ip')) {
-                ip = el.nextSibling.textContent.trim();
-            } else if (el.textContent.includes('cidr')) {
-                ip = el.nextSibling.textContent.trim();
-            }
-        });
-        return ip;
-    }
-
-    const nodes = nodesAndLinks.nodes;
-    const links = nodesAndLinks.links;
-    const title = nodesAndLinks.title;
+    const nodes = nodesAndLinks.nodes;                                                  // Separates the nodes from the input
+    const links = nodesAndLinks.links;                                                  // Separates the links from the input
+    const title = nodesAndLinks.title;                                                  // Separates the title from the input
 
     for (var node of nodes) {
-        node.info = formatObject(node.data);
-        node.ip = IpFromHtml(node.info);
+        node.info = formatObject(node.data);                                            // Adds each node's data to itself as html
+        node.ip = IpFromHtml(node.info);                                                // Adds each node's IP address from the html
     }
 
-    const width = window.innerWidth
-    const height = window.innerHeight
+    const width = window.innerWidth                                                     // Stores the window width
+    const height = window.innerHeight                                                   // Stores the window height
 
-    const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];
-    const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a',
+    const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];                 // Recores the unique node types in an array
+    const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a',   // Defines GCC and AU colors
         '#003359 ', '#A5ACAF', '#3CB6CE', '#00AEEF', '#64A0C8', '#44D62C'];
-    const legendData = uniqueNodeTypes.map((type, i) => ({ type, color: colors[i] }));
+    const legendData = uniqueNodeTypes.map((type, i) => ({ type, color: colors[i] }));  // Assign a GCC and AU color to each node type
 
-    const colorScale = (function () {
+    const colorScale = (function () {                                                   // Assign a GCC and AU color to each node
         const domain = uniqueNodeTypes;
         const range = colors;
         const scale = {};
@@ -220,41 +150,37 @@ function drawNodes(nodesAndLinks) {
         };
     })();
 
-
-    // https://vecta.io/symbols/241/cisco-network-topology-icons-black-and-white
-    const pictures = {
-        'Root': "https://symbols.getvecta.com/stencil_241/113_gatekeeper.f0eb77a73a.svg",
-        'Net': "https://symbols.getvecta.com/stencil_241/292_web-cluster.2e65dd1db3.svg",
-        'Subnet': "https://symbols.getvecta.com/stencil_241/78_cloud.271ac2c149.svg",
-        'Router': "https://symbols.getvecta.com/stencil_241/224_router.be30fb87e7.svg",
-        'RouterInterface': "https://symbols.getvecta.com/stencil_241/165_mau.f0621db6a3.svg",
-        'Server': "https://symbols.getvecta.com/stencil_241/109_file-server.0889a505f2.svg",
-        'Port': "https://symbols.getvecta.com/stencil_241/178_modem.90363b409e.svg",
-        'FloatingIP': "https://symbols.getvecta.com/stencil_241/74_ciscoca.106568a1a9.svg",
-        'FloatingIPAssociation': "https://symbols.getvecta.com/stencil_241/287_vpn-gateway.4c256282ec.svg",
-        'ResourceGroup': "https://symbols.getvecta.com/stencil_241/301_workgroup-director.1c23900b49.svg",
-        'SecurityGroup': "https://symbols.getvecta.com/stencil_241/151_key.713f0682bf.svg",
-        'Firewall': "https://symbols.getvecta.com/stencil_241/110_firewall.e262f4364e.svg",
-        'Other': "https://symbols.getvecta.com/stencil_241/265_terminal.a18d4445ed.svg"
+    const pictures = {                                                                  // Assign each node type an icon
+        'Root': "./assets/img/gcc_horz_white.svg",
+        'Net': "./assets/img/os__neutron__net.svg",
+        'Subnet': "./assets/img/os__neutron__subnet.svg",
+        'Router': "./assets/img/os__neutron__router.svg",
+        'RouterInterface': "./assets/img/os__neutron__routerinterface.svg",
+        'Server': "./assets/img/os__nova__server.svg",
+        'Port': "./assets/img/os__neutron__port.svg",
+        'FloatingIP': "./assets/img/os__neutron__floatingip.svg",
+        'FloatingIPAssociation': "./assets/img/os__neutron__floatingipassociation.svg",
+        'ResourceGroup': "./assets/img/os__heat__resourcegroup.svg",
+        'SecurityGroup': "./assets/img/os__neutron__securitygroup.svg",
+        'Other': "./assets/img/question__mark.png"
     }
 
-    const weights = {
+    const weights = {                                                                   // Assign each node type a weight
         'Root': 10,
         'Net': 12,
         'Subnet': 16,
         'Router': 14,
         'RouterInterface': 7,
         'Server': 12,
-        'Port': 7,
+        'Port': 8,
         'FloatingIP': 8,
         'FloatingIPAssociation': 5,
         'ResourceGroup': 7,
         'SecurityGroup': 5,
-        'Firewall': 10,
         'Other': 8
     };
 
-    const force = d3.forceSimulation(nodes)
+    const force = d3.forceSimulation(nodes)                                             // Start a force simulation that updates every tick
         .force("link", d3.forceLink(links).id(d => d.id))
         .force("charge", d3.forceManyBody()
             .strength(d => weights[d.type] * -150 || weights.Other * -150))
@@ -263,39 +189,39 @@ function drawNodes(nodesAndLinks) {
         .force("y", d3.forceY())
         .on("tick", update);
 
-    const zoom = d3.zoom()
+    const zoom = d3.zoom()                                                              // Define the zoom function
         .scaleExtent([0.25, 4])
         .on('zoom', zoomed);
 
-    const svg = d3.select('body')
+    const svg = d3.select('body')                                                       // Define the main svg body for the topology
         .append('svg')
         .attr('width', width)
         .attr('height', height)
         .attr("cursor", "crosshair")
         .call(zoom);
 
-    const subnetGroups = svg.selectAll('.subnet-group')
+    const subnetGroups = svg.selectAll('.subnet-group')                                 // Add Subnet nodes to a group
         .data(nodes.filter(d => d.type === 'Subnet'))
         .join('g')
         .attr('class', 'subnet-group');
 
-    const perimeterPaths = subnetGroups.selectAll('.perimeter-path')
-        .data(d => [d]) // bind each subnet node to its own group
+    const perimeterPaths = subnetGroups.selectAll('.perimeter-path')                    // Bind each subnet node to its own group
+        .data(d => [d])
         .join('path')
         .attr('class', 'perimeter-path')
         .attr('fill', d => colorScale(d.type))
         .attr('fill-opacity', 0.2)
 
-    function drawPerimeter(subnetNode, depth = 3, paddingAngle = 20) {
+    function drawPerimeter(subnetNode, depth = 3, paddingAngle = 20) {                  // Draw a hull encompassing Subnet nodes and their connections
         const linkedNodes = getLinkedNodes(subnetNode, depth);
-        const perimeterNodes = [subnetNode, ...linkedNodes];
-        const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));
-        if (!hull) {
+        const perimeterNodes = [subnetNode, ...linkedNodes];                            // Adds all subnet elements to an array
+        const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));      // Constructs the hull based on the perimeter nodes
+        if (!hull) {                                                                    // Creates a null hull if there are no perimeter nodes
             perimeterPaths.filter(d => d === subnetNode).attr("d", "");
             return;
         }
         const centroid = d3.polygonCentroid(hull);
-        const paddedHull = hull.map(point => {
+        const paddedHull = hull.map(point => {                                          // Adds a buffer region using the hull centroid and an angle
             const angle = Math.atan2(point[1] - centroid[1], point[0] - centroid[0]);
             return [
                 point[0] + paddingAngle * Math.cos(angle),
@@ -304,6 +230,13 @@ function drawNodes(nodesAndLinks) {
         });
         const expandedHull = paddedHull.map(point => point.join(',')).join(' ');
         perimeterPaths.filter(d => d === subnetNode).attr("d", `M${expandedHull}Z`);
+
+        /**
+         * Recursivly finds all nodes with a the input as a source.
+         * @param {string} node - The starting node object
+         * @param {object} depth - The function search depth
+         * @returns {string} - An array of connected node objects
+         */
         function getLinkedNodes(node, depth) {
             if (depth === 0) return [];
             const linked = nodes.filter(n =>
@@ -322,7 +255,7 @@ function drawNodes(nodesAndLinks) {
         }
     }
 
-    const linksGroup = svg.append('g')
+    const linksGroup = svg.append('g')                                              // Define the links between nodes 
         .selectAll('line')
         .data(links)
         .join('line')
@@ -330,7 +263,7 @@ function drawNodes(nodesAndLinks) {
         .attr('stroke', d => colorScale(d.source.type))
         .attr("stroke-opacity", 0.75);
 
-    const nodesGroup = svg.append('g')
+    const nodesGroup = svg.append('g')                                              // Define the nodes with color, tooltips, and drag properties
         .selectAll('circle')
         .data(nodes)
         .join('circle')
@@ -354,7 +287,7 @@ function drawNodes(nodesAndLinks) {
         })
         .call(drag(force));
 
-    const imageGroup = svg.append('g')
+    const imageGroup = svg.append('g')                                              // Define the node icons
         .selectAll('image')
         .data(nodes)
         .join('image')
@@ -365,7 +298,7 @@ function drawNodes(nodesAndLinks) {
         .attr('y', d => d.y - weights[d.type] * 2 || d.y - weights.Other * 2)
         .style('pointer-events', 'none');
 
-    const textGroup = svg.append('g')
+    const textGroup = svg.append('g')                                               // Define the node text
         .selectAll('text')
         .data(nodes)
         .join('text')
@@ -377,7 +310,7 @@ function drawNodes(nodesAndLinks) {
         .style('font-size', d => weights[d.type] * 1.25 || weights.Other * 1.25)
         .style('pointer-events', 'none');
 
-    function zoomed(event) {
+    function zoomed(event) {                                                        // Define the zoomed function to account for space changing
         const { transform } = event;
 
         subnetGroups.attr('transform', transform);
@@ -387,7 +320,7 @@ function drawNodes(nodesAndLinks) {
         textGroup.attr('transform', transform);
     }
 
-    const tooltip = d3.select('body')
+    const tooltip = d3.select('body')                                               // Define the tooltips
         .append('div')
         .attr('class', 'tooltip')
         .style('position', 'absolute')
@@ -402,9 +335,9 @@ function drawNodes(nodesAndLinks) {
         .style('max-width', '300px')
         .style('text-align', 'center');
 
-    const titleMaxWidth = width / 1.25;
+    const titleMaxWidth = width / 1.25;                                             // Set limits on the title width
 
-    const top = svg.append('text')
+    const top = svg.append('text')                                                  // Define the title
         .text(title)
         .attr('x', width / 2)
         .attr('y', 30)
@@ -419,11 +352,11 @@ function drawNodes(nodesAndLinks) {
         .attr('lengthAdjust', 'spacingAndGlyphs')
         .attr('title', title);
 
-    const legend = svg.append("g")
+    const legend = svg.append("g")                                                  // Define the legend
         .attr("class", "legend")
-        .attr("transform", "translate(50, 10)");
+        .attr("transform", "translate(10, 10)");
 
-    legend.selectAll("rect")
+    legend.selectAll("rect")                                                        // Add colors to the legend
         .data(legendData)
         .enter()
         .append("rect")
@@ -433,7 +366,7 @@ function drawNodes(nodesAndLinks) {
         .attr("height", 20)
         .attr("fill", d => d.color);
 
-    legend.selectAll("text")
+    legend.selectAll("text")                                                        // Add text to the legend
         .data(legendData)
         .enter()
         .append("text")
@@ -444,7 +377,7 @@ function drawNodes(nodesAndLinks) {
         .style("fill", "#333");
 
     var was_locked = false;
-    function toggleLock() {
+    function toggleLock() {                                                         // Lockes the nodes in place if toggled
         nodesGroup.each(function (d) {
             d.locked = !d.locked;
             if (d.locked) {
@@ -460,34 +393,36 @@ function drawNodes(nodesAndLinks) {
         }
     }
 
-    function update() {
-        nodesGroup.attr('cx', d => d.x)
+    function update() {                                                             // Run by the force simulation every tick
+        nodesGroup.attr('cx', d => d.x)                                             // Updates the node positions
             .attr('cy', d => d.y);
 
-        imageGroup.attr('x', d => d.x - weights[d.type] * 2 || d.x - weights.Other * 2)
-            .attr('y', d => d.y - weights[d.type] * 2 || d.y - weights.Other * 2);
+        imageGroup.attr('x', d => d.x - weights[d.type] * 2                         // Updates the icon positions
+            || d.x - weights.Other * 2)
+            .attr('y', d => d.y - weights[d.type] * 2
+                || d.y - weights.Other * 2);
 
-        textGroup.attr('x', d => d.x)
+        textGroup.attr('x', d => d.x)                                               // Updates the text positions
             .attr('y', d => d.y)
             .text(d => {
-                if (ips) {
+                if (ips) {                                                          // Updates the Show IPs state
                     return d.ip;
                 } else {
                     return d.name;
                 }
             });
 
-        linksGroup.attr('x1', d => d.source.x)
+        linksGroup.attr('x1', d => d.source.x)                                      // Updates the link positions
             .attr('y1', d => d.source.y)
             .attr('x2', d => d.target.x)
             .attr('y2', d => d.target.y);
 
-        if (was_locked !== locked) {
+        if (was_locked !== locked) {                                                // Updates the Lock Nodes state
             toggleLock();
             was_locked = locked;
         }
 
-        if (subnet) {
+        if (subnet) {                                                               // Updates the Show Subnets state
             subnetGroups.each(function (d) {
                 drawPerimeter(d);
             });
@@ -502,10 +437,10 @@ function drawNodes(nodesAndLinks) {
         }
     }
 
-    function drag(simulation) {
+    function drag(simulation) {                                                     // Manages the drag actions, called by nodes
         let x, y, dx, dy;
 
-        function dragstarted(event) {
+        function dragstarted(event) {                                               // Manages the begining of a drag
             if (!event.active) simulation.alphaTarget(0.3).restart();
             svg.attr("cursor", "grab");
 
@@ -516,7 +451,7 @@ function drawNodes(nodesAndLinks) {
             event.subject.fy = y;
         }
 
-        function dragged(event) {
+        function dragged(event) {                                                   // Manages the middle of a drag
             svg.attr("cursor", "grabbing");
 
             const transform = d3.zoomTransform(svg.node());
@@ -531,7 +466,7 @@ function drawNodes(nodesAndLinks) {
             tooltip.style("visibility", "hidden");
         }
 
-        function dragended(event) {
+        function dragended(event) {                                                 // Manages the end of a drag
             if (!event.active) simulation.alphaTarget(0);
             svg.attr("cursor", "crosshair");
 
@@ -541,9 +476,98 @@ function drawNodes(nodesAndLinks) {
             }
         }
 
-        return d3.drag()
+        return d3.drag()                                                            // Chooses the drag phase
             .on("start", dragstarted)
             .on("drag", dragged)
             .on("end", dragended);
+    }
+    /**
+     * Converts an object to an HTML string representation, recursively.
+     * Duplicate values for a given key are separated by commas.
+     * @param {object} obj - The object to format
+     * @param {string} key - The key for the current object, defaults to empty string
+     * @param {number} indent - The indentation level, defaults to 0
+     * @param {string} parentKey - The key of the parent object, defaults to empty string
+     * @param {object} result - The object to store results, defaults to empty object
+     * @returns {string} - The HTML string representation of the object
+     */
+    function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
+        let html = '';
+
+        if (Array.isArray(obj)) {                                                       // if obj is an array: 
+            obj.forEach((value) => {                                                    // iterate over its elements 
+                if (value !== '' && value !== '.') {                                    // ignore empty and dot values
+                    html += formatObject(value,                                         // call formatObject recursively on each element
+                        `${key}`,
+                        indent + 2,
+                        parentKey,
+                        result);
+                }
+            });
+        } else if (typeof obj === 'object' && obj !== null) {                           // if obj is an object: 
+            for (const [objKey, value] of Object.entries(obj)) {                        // iterate over its key-value pairs and call formatObject recursively on each value
+                const currentKey = objKey === 'get_resource' ? parentKey : objKey;      // parentKey key for get_resource objects, otherwise objKey
+                if (                                                                    // ignore specific keys
+                    currentKey !== 'template' &&
+                    currentKey !== 'get_param' &&
+                    currentKey !== 'user_data_format' &&
+                    currentKey !== 'list_join' &&
+                    currentKey !== 'name'
+                ) {
+                    html += formatObject(value,                                         // call formatObject recursively on each currentKey entry
+                        currentKey,
+                        indent + 2,
+                        currentKey,
+                        result);
+                } else if (currentKey === 'list_join') {                                // if currentKey is list_join, use parentKey
+                    html += formatObject(value,                                         // call formatObject recursively on each parentKey entry
+                        parentKey,
+                        indent + 2,
+                        parentKey,
+                        result);
+                }
+            }
+        } else {
+            if (key !== '' && key !== undefined) {
+                if (result[key] === undefined) {                                        // if obj is a primitive type: 
+                    result[key] = [];                                                   // store it in the result object under the given key
+                }
+                result[key].push(obj);
+            }
+        }
+        if (key === '') {                                                               // if key is empty, format the result object as an HTML string
+            for (const [resultKey, values] of Object.entries(result)) {
+                if (values.length > 1) {                                                // if there are multiple values for a given key: 
+                    html += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`; // display them separated by commas
+                } else {                                                                // otherwise, 
+                    html += `<strong>${resultKey}: </strong>${values[0]}<br/>`;         // display the single value
+                }
+            }
+        }
+        return html;
+    }
+
+    /**
+     * Parses html and extracts IP address(es)
+     * It finds: ip_address, fixed_ip, and cidr
+     * @param {object} html - The html to be parsed
+     * @returns {string} - The IP address(es) in the html
+     */
+    function IpFromHtml(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const strongElements = doc.querySelectorAll('strong');
+        let ip = '';
+
+        strongElements.forEach((el) => {                                                // Loops through each html element.
+            if (el.textContent.includes('ip_address')) {                                // Gets the ip_address html entries
+                ip = el.nextSibling.textContent.trim();
+            } else if (el.textContent.includes('fixed_ip')) {                           // Gets the fixed_ip html entries
+                ip = el.nextSibling.textContent.trim();
+            } else if (el.textContent.includes('cidr')) {                               // Gets the cidr html entries
+                ip = el.nextSibling.textContent.trim();
+            }
+        });
+        return ip;
     }
 }

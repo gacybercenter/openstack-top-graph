@@ -8,55 +8,6 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/3.14.1/js-yaml.min.js"></script>
     <link rel="icon" href="./assets/img/favicon.ico" type="image/x-icon">
-    <style>
-        body {
-            background-color: #f5f5f5;
-        }
-
-        .file-input-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 10px;
-            margin-bottom: 10px;
-        }
-
-        .file-input-label {
-            background-color: #c1d72e;
-            color: #000000;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .buttons {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 10px;
-            margin-bottom: 0px;
-        }
-
-        .button {
-            background-color: green;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            margin-left: 10px;
-            margin-right: 10px;
-            padding: 5px 10px;
-            cursor: pointer;
-        }
-
-        .button.on {
-            background-color: red;
-        }
-    </style>
 </head>
 
 <body>
@@ -70,9 +21,6 @@
         <button id="locked" class="button">Lock Nodes</button>
         <button id="subnet" class="button">Show Subnets</button>
         <button id="ips" class="button">Show IPs</button>
-    </div>
-    <div class="container">
-        <svg></svg>
     </div>
     <script src="./assets/js/hot-parse.js"></script>
     <script>
