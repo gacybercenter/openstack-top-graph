@@ -27,7 +27,7 @@ It should look something like this:
 7. Toggleable Options Buttons
 
 ### Options Buttons:
-1. Lock Nodes - Locks each node in place (they still can be dragged).
+1. Lock Nodes - Locks each node in place (they still can be dragged)
 2. Show Subnets - Draws a polygon hull around Subnets and their dependencies
 3. Show IPs - Replaces all the node names with the node IPs if applicable
 
@@ -44,6 +44,8 @@ Please make sure to update the examples as appropriate.
 
 Copyright 2020 Augusta University
 
+[Augusta University Intellectual Property Policy](https://www.augusta.edu/services/legal/policyinfo/policy/intellectual-property-policy.pdf)
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -56,4 +58,4 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-[AU Intellectual Property Policy](https://www.augusta.edu/services/legal/policyinfo/policy/intellectual-property-policy.pdf)
+
