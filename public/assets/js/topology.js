@@ -48,78 +48,82 @@ function nodeMap(parsedContent) {
     const links = [];                                                                   // Creates an array for links
     const sgNodes = [];                                                                 // Creates an array for duplicate security group nodes
 
-    let title;
+    let title;                                                                          // Parse the title from the YAML/JSON
     try {
         if (parsedContent.parameters.range_id.default) {
             title = parsedContent.parameters.range_id.default;
-        } else if (parsedContent.description) {
-            title = parsedContent.description;
-        } else {
-            title = "No Title Found...";
         }
     } catch (error) {
-        console.log("Error occurred while getting title:", error);
-        title = "No Title Found...";
-    }
-
-    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Itterate through all of the resources
-        const name = `${resourceName}`;                                                 // Store the name
-        const type = resource.type.split("::")[2];                                      // Store the type
-        const data = resource.properties;                                               // Store the data (properties)
-
-        const node = { name, type, data };                                              // Create a node object using { name, type, data }
-        amounts[type] = (amounts[type] || 0) + 1;
-
-        if (type === 'SecurityGroup') {                                                 // Add SecurityGroup nodes to the sgNodes array
-            sgNodes.push(node);
-        } else {                                                                        // Add all other nodes to the nodes array
-            nodes.push(node);
-        }
-
-        if (type === 'Router') {                                                        // Attach all routers to the root node
-            links.push({ source: node, target: root });
+        try {
+            if (parsedContent.description) {
+                title = parsedContent.description;
+            } else {
+                title = "No Title Found...";
+            }
+        } catch (error) {
+            console.log("Error occurred while getting title:", error);
+            title = "No Title Found...";
         }
     }
 
-    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Iterate through all resources
-        const processProperty = (property, parentResourceName) => {                     // Add links between nodes based on what resources they get
-            if (typeof property === 'object') {
-                if (property['get_resource'] !== undefined) {
-                    const target = nodes.find(n => n.name === parentResourceName);
-                    const sourceName = property['get_resource'];
-                    const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
-                    if (source.type !== 'Net' || target.type !== 'Port') {              // Filter out all Net to Port links
-                        links.push({ source, target });
-                    }
-                }
-                for (const [key, value] of Object.entries(property)) {                  // For each key, recurse the link finding process
-                    processProperty(value, parentResourceName);
+for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Itterate through all of the resources
+    const name = `${resourceName}`;                                                 // Store the name
+    const type = resource.type.split("::")[2];                                      // Store the type
+    const data = resource.properties;                                               // Store the data (properties)
+
+    const node = { name, type, data };                                              // Create a node object using { name, type, data }
+    amounts[type] = (amounts[type] || 0) + 1;
+
+    if (type === 'SecurityGroup') {                                                 // Add SecurityGroup nodes to the sgNodes array
+        sgNodes.push(node);
+    } else {                                                                        // Add all other nodes to the nodes array
+        nodes.push(node);
+    }
+
+    if (type === 'Router') {                                                        // Attach all routers to the root node
+        links.push({ source: node, target: root });
+    }
+}
+
+for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Iterate through all resources
+    const processProperty = (property, parentResourceName) => {                     // Add links between nodes based on what resources they get
+        if (typeof property === 'object') {
+            if (property['get_resource'] !== undefined) {
+                const target = nodes.find(n => n.name === parentResourceName);
+                const sourceName = property['get_resource'];
+                const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
+                if (source.type !== 'Net' || target.type !== 'Port') {              // Filter out all Net to Port links
+                    links.push({ source, target });
                 }
             }
-        }
-
-        for (const [propertyName, property] of Object.entries(resource.properties)) {   // For each object, recurse the link finding process
-            processProperty(property, resourceName);
+            for (const [key, value] of Object.entries(property)) {                  // For each key, recurse the link finding process
+                processProperty(value, parentResourceName);
+            }
         }
     }
 
-    for (const sgNode of sgNodes) {                                                     // Duplicate linked SecurityGroup nodes
-        const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
-        const uniqueLinkedNodes = [...new Set(linkedNodes)];
-        if (uniqueLinkedNodes.length === 0) {
+    for (const [propertyName, property] of Object.entries(resource.properties)) {   // For each object, recurse the link finding process
+        processProperty(property, resourceName);
+    }
+}
+
+for (const sgNode of sgNodes) {                                                     // Duplicate linked SecurityGroup nodes
+    const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
+    const uniqueLinkedNodes = [...new Set(linkedNodes)];
+    if (uniqueLinkedNodes.length === 0) {
+        const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
+        nodes.push(newNode);
+        amounts['SecurityGroup'] = (amounts['SecurityGroup'] || 0) + 1;
+    } else {
+        for (const linkedNode of uniqueLinkedNodes) {                               // Link duplicate SecurityGroup nodes
             const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
             nodes.push(newNode);
-            amounts['SecurityGroup'] = (amounts['SecurityGroup'] || 0) + 1;
-        } else {
-            for (const linkedNode of uniqueLinkedNodes) {                               // Link duplicate SecurityGroup nodes
-                const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
-                nodes.push(newNode);
-                links.push({ source: linkedNode, target: newNode });
-            }
-            links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
+            links.push({ source: linkedNode, target: newNode });
         }
+        links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
     }
-    return { nodes, links, amounts, title };
+}
+return { nodes, links, amounts, title };
 }
 /**
  * Takes in a an object of nodes, links, and titles.
