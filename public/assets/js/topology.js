@@ -47,13 +47,19 @@ function nodeMap(parsedContent) {
     const links = [];                                                                   // Creates an array for links
     const sgNodes = [];                                                                 // Creates an array for duplicate security group nodes
 
-    if (parsedContent.parameters.range_id) {                                            // Set the title to the default key value
-        var title = parsedContent.parameters.range_id.default;
-    } else if (parsedContent.description) {                                             // Otherwise, Set the title to the description key value
-        var title = parsedContent.description;
-    } else {                                                                            // If no title found: Set the title to a custom message
-        var title = "No Title Found...";
-    }
+    let title;
+    try {
+        if (parsedContent.parameters.range_id.default) {                          
+            title = parsedContent.parameters.range_id.default;
+        } else if (parsedContent.description) {                                            
+            title = parsedContent.description;
+        } else {                                                                            
+            title = "No Title Found...";
+        }
+    } catch (error) {
+        console.log("Error occurred while getting title:", error);
+        title = "No Title Found...";
+    }    
 
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Itterate through all of the resources
         const name = `${resourceName}`;                                                 // Store the name
@@ -151,7 +157,7 @@ function drawNodes(nodesAndLinks) {
     })();
 
     const pictures = {                                                                  // Assign each node type an icon
-        'Root': "./assets/img/gcc_horz_white.svg",
+        'Root': "./assets/img/favicon.ico",
         'Net': "./assets/img/os__neutron__net.svg",
         'Subnet': "./assets/img/os__neutron__subnet.svg",
         'Router': "./assets/img/os__neutron__router.svg",
