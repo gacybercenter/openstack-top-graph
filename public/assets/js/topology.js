@@ -21,7 +21,7 @@ function handleFileSelect(event) {                                              
                 ? jsyaml.load(fileContent)
                 : JSON.parse(fileContent);
 
-            nodesAndLinks = nodeMap(parsedContent);                                     // Construct a node map based on the parsed content.
+            nodesAndLinks = nodeMap(parsedContent, file.name);                                     // Construct a node map based on the parsed content.
 
             drawNodes(nodesAndLinks);
 
@@ -40,7 +40,7 @@ fileInput.addEventListener("change", handleFileSelect, false);
  * @param {object} parsedContent - the parsed JAML or JSON
  * @returns {object} - the { nodes, links, and title }
  */
-function nodeMap(parsedContent) {
+function nodeMap(parsedContent, name) {
 
     const root = { name: "openstack", type: "Root" };                                   // Creates the root node
     const amounts = { Root: 1 };                                                        // Creates a dictionary for node amounts
@@ -50,19 +50,19 @@ function nodeMap(parsedContent) {
 
     let title;                                                                          // Parse the title from the YAML/JSON
     try {
-        if (parsedContent.parameters.range_id.default) {
+        if (parsedContent.parameters.range_id.default) {                                // Check for the parameter range_id.default
             title = parsedContent.parameters.range_id.default;
         }
     } catch (error) {
         try {
-            if (parsedContent.description) {
+            if (parsedContent.description) {                                            // Check for the description
                 title = parsedContent.description;
             } else {
-                title = "No Title Found...";
+                title = name;
             }
         } catch (error) {
             console.log("Error occurred while getting title:", error);
-            title = "No Title Found...";
+            title = name;
         }
     }
 
