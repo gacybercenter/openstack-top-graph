@@ -174,9 +174,9 @@ function drawNodes(nodesAndLinks) {
         'Server': 12,
         'Port': 8,
         'FloatingIP': 8,
-        'FloatingIPAssociation': 5,
-        'ResourceGroup': 7,
-        'SecurityGroup': 5,
+        'FloatingIPAssociation': 6,
+        'ResourceGroup': 10,
+        'SecurityGroup': 6,
         'Other': 8
     };
 
@@ -235,7 +235,7 @@ function drawNodes(nodesAndLinks) {
          * Recursivly finds all nodes with a the input as a source.
          * @param {string} node - The starting node object
          * @param {object} depth - The function search depth
-         * @returns {string} - An array of connected node objects
+         * @returns {string} - An array containing the connected node objects
          */
         function getLinkedNodes(node, depth) {
             if (depth === 0) return [];
@@ -475,7 +475,6 @@ function drawNodes(nodesAndLinks) {
                 event.subject.fy = null;
             }
         }
-
         return d3.drag()                                                            // Chooses the drag phase
             .on("start", dragstarted)
             .on("drag", dragged)
@@ -493,7 +492,6 @@ function drawNodes(nodesAndLinks) {
      */
     function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
         let html = '';
-
         if (Array.isArray(obj)) {                                                       // if obj is an array: 
             obj.forEach((value) => {                                                    // iterate over its elements 
                 if (value !== '' && value !== '.') {                                    // ignore empty and dot values
@@ -546,10 +544,9 @@ function drawNodes(nodesAndLinks) {
         }
         return html;
     }
-
     /**
-     * Parses html and extracts IP address(es)
-     * It finds: ip_address, fixed_ip, and cidr
+     * Parses html and extracts IP address(es).
+     * It finds: ip_address, fixed_ip, and cidr.
      * @param {object} html - The html to be parsed
      * @returns {string} - The IP address(es) in the html
      */
