@@ -21,7 +21,7 @@ function handleFileSelect(event) {                                              
                 ? jsyaml.load(fileContent)
                 : JSON.parse(fileContent);
 
-            nodesAndLinks = nodeMap(parsedContent, file.name);                                     // Construct a node map based on the parsed content.
+            nodesAndLinks = nodeMap(parsedContent, file.name);                          // Construct a node map based on the parsed content.
 
             drawNodes(nodesAndLinks);
 
@@ -38,6 +38,7 @@ fileInput.addEventListener("change", handleFileSelect, false);
  * Parses through the data extracting information like: nodes, links, and the title.
  * It also duplicates attached security groups and adds a root node.
  * @param {object} parsedContent - the parsed JAML or JSON
+ * @param {object} name - the file name used in case the title can't be found
  * @returns {object} - the { nodes, links, and title }
  */
 function nodeMap(parsedContent, name) {
