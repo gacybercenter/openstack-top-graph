@@ -43,23 +43,24 @@ fileInput.addEventListener("change", handleFileSelect, false);
 function nodeMap(parsedContent) {
 
     const root = { name: "openstack", type: "Root" };                                   // Creates the root node
+    const amounts = { Root: 1 };                                                        // Creates a dictionary for node amounts
     const nodes = [root];                                                               // Creates an array for nodes and adds the root node
     const links = [];                                                                   // Creates an array for links
     const sgNodes = [];                                                                 // Creates an array for duplicate security group nodes
 
     let title;
     try {
-        if (parsedContent.parameters.range_id.default) {                          
+        if (parsedContent.parameters.range_id.default) {
             title = parsedContent.parameters.range_id.default;
-        } else if (parsedContent.description) {                                            
+        } else if (parsedContent.description) {
             title = parsedContent.description;
-        } else {                                                                            
+        } else {
             title = "No Title Found...";
         }
     } catch (error) {
         console.log("Error occurred while getting title:", error);
         title = "No Title Found...";
-    }    
+    }
 
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Itterate through all of the resources
         const name = `${resourceName}`;                                                 // Store the name
@@ -67,6 +68,7 @@ function nodeMap(parsedContent) {
         const data = resource.properties;                                               // Store the data (properties)
 
         const node = { name, type, data };                                              // Create a node object using { name, type, data }
+        amounts[type] = (amounts[type] || 0) + 1;
 
         if (type === 'SecurityGroup') {                                                 // Add SecurityGroup nodes to the sgNodes array
             sgNodes.push(node);
@@ -107,6 +109,7 @@ function nodeMap(parsedContent) {
         if (uniqueLinkedNodes.length === 0) {
             const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
             nodes.push(newNode);
+            amounts['SecurityGroup'] = (amounts['SecurityGroup'] || 0) + 1;
         } else {
             for (const linkedNode of uniqueLinkedNodes) {                               // Link duplicate SecurityGroup nodes
                 const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
@@ -116,10 +119,8 @@ function nodeMap(parsedContent) {
             links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
         }
     }
-    return { nodes, links, title };
+    return { nodes, links, amounts, title };
 }
-
-
 /**
  * Takes in a an object of nodes, links, and titles.
  * Generates a node map using d3 v7 and html.
@@ -129,6 +130,7 @@ function drawNodes(nodesAndLinks) {
 
     const nodes = nodesAndLinks.nodes;                                                  // Separates the nodes from the input
     const links = nodesAndLinks.links;                                                  // Separates the links from the input
+    const amounts = nodesAndLinks.amounts
     const title = nodesAndLinks.title;                                                  // Separates the title from the input
 
     for (var node of nodes) {
@@ -142,7 +144,12 @@ function drawNodes(nodesAndLinks) {
     const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];                 // Recores the unique node types in an array
     const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a',   // Defines GCC and AU colors
         '#003359 ', '#A5ACAF', '#3CB6CE', '#00AEEF', '#64A0C8', '#44D62C'];
-    const legendData = uniqueNodeTypes.map((type, i) => ({ type, color: colors[i] }));  // Assign a GCC and AU color to each node type
+
+    const legendData = uniqueNodeTypes.map((type, i) => ({                              // Assign a GCC and AU color and count to legend data
+        type,
+        count: amounts[type],
+        color: colors[i]
+    }));
 
     const colorScale = (function () {                                                   // Assign a GCC and AU color to each node
         const domain = uniqueNodeTypes;
@@ -236,7 +243,6 @@ function drawNodes(nodesAndLinks) {
         });
         const expandedHull = paddedHull.map(point => point.join(',')).join(' ');
         perimeterPaths.filter(d => d === subnetNode).attr("d", `M${expandedHull}Z`);
-
         /**
          * Recursivly finds all nodes with a the input as a source.
          * @param {string} node - The starting node object
@@ -372,13 +378,13 @@ function drawNodes(nodesAndLinks) {
         .attr("height", 20)
         .attr("fill", d => d.color);
 
-    legend.selectAll("text")                                                        // Add text to the legend
+    legend.selectAll("text")                                                         // Add text to the legend
         .data(legendData)
         .enter()
         .append("text")
         .attr("x", 40)
         .attr("y", (d, i) => i * 30 + 15)
-        .text(d => d.type)
+        .text(d => `${d.type} (${d.count})`)
         .style("font-size", "16px")
         .style("fill", "#333");
 
@@ -498,33 +504,33 @@ function drawNodes(nodesAndLinks) {
      */
     function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
         let html = '';
-        if (Array.isArray(obj)) {                                                       // if obj is an array: 
-            obj.forEach((value) => {                                                    // iterate over its elements 
-                if (value !== '' && value !== '.') {                                    // ignore empty and dot values
-                    html += formatObject(value,                                         // call formatObject recursively on each element
+        if (Array.isArray(obj)) {                                                       // If obj is an array: 
+            obj.forEach((value) => {                                                    // Iterate over its elements 
+                if (value !== '' && value !== '.') {                                    // Ignore empty and dot values
+                    html += formatObject(value,                                         // Call formatObject recursively on each element
                         `${key}`,
                         indent + 2,
                         parentKey,
                         result);
                 }
             });
-        } else if (typeof obj === 'object' && obj !== null) {                           // if obj is an object: 
-            for (const [objKey, value] of Object.entries(obj)) {                        // iterate over its key-value pairs and call formatObject recursively on each value
-                const currentKey = objKey === 'get_resource' ? parentKey : objKey;      // parentKey key for get_resource objects, otherwise objKey
-                if (                                                                    // ignore specific keys
+        } else if (typeof obj === 'object' && obj !== null) {                           // If obj is an object: 
+            for (const [objKey, value] of Object.entries(obj)) {                        // Iterate over its key-value pairs and call formatObject recursively on each value
+                const currentKey = objKey === 'get_resource' ? parentKey : objKey;      // parentKey for get_resource objects, otherwise objKey
+                if (                                                                    // Ignore specific keys
                     currentKey !== 'template' &&
                     currentKey !== 'get_param' &&
                     currentKey !== 'user_data_format' &&
                     currentKey !== 'list_join' &&
                     currentKey !== 'name'
                 ) {
-                    html += formatObject(value,                                         // call formatObject recursively on each currentKey entry
+                    html += formatObject(value,                                         // Call formatObject recursively on each currentKey entry
                         currentKey,
                         indent + 2,
                         currentKey,
                         result);
-                } else if (currentKey === 'list_join') {                                // if currentKey is list_join, use parentKey
-                    html += formatObject(value,                                         // call formatObject recursively on each parentKey entry
+                } else if (currentKey === 'list_join') {                                // If currentKey is list_join, use parentKey
+                    html += formatObject(value,                                         // Call formatObject recursively on each parentKey entry
                         parentKey,
                         indent + 2,
                         parentKey,
@@ -533,18 +539,18 @@ function drawNodes(nodesAndLinks) {
             }
         } else {
             if (key !== '' && key !== undefined) {
-                if (result[key] === undefined) {                                        // if obj is a primitive type: 
-                    result[key] = [];                                                   // store it in the result object under the given key
+                if (result[key] === undefined) {                                        // If obj is a primitive type: 
+                    result[key] = [];                                                   // Store it in the result object under the given key
                 }
                 result[key].push(obj);
             }
         }
-        if (key === '') {                                                               // if key is empty, format the result object as an HTML string
+        if (key === '') {                                                               // If key is empty, format the result object as an HTML string
             for (const [resultKey, values] of Object.entries(result)) {
-                if (values.length > 1) {                                                // if there are multiple values for a given key: 
-                    html += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`; // display them separated by commas
-                } else {                                                                // otherwise, 
-                    html += `<strong>${resultKey}: </strong>${values[0]}<br/>`;         // display the single value
+                if (values.length > 1) {                                                // If there are multiple values for a given key: 
+                    html += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`; // Display them separated by commas
+                } else {                                                                // Otherwise, 
+                    html += `<strong>${resultKey}: </strong>${values[0]}<br/>`;         // Display the single value
                 }
             }
         }
