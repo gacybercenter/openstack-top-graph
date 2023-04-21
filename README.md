@@ -19,7 +19,7 @@ It should look something like this:
 
 ### Features:
 1. Force Simulation
-2. Draging and Dropping
+2. Dragging and Dropping
 3. Panning
 4. Zooming
 5. Device Tooltips
