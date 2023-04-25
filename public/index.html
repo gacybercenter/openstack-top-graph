@@ -21,21 +21,29 @@
         <button id="locked" class="button">Lock Nodes</button>
         <button id="subnet" class="button">Show Subnets</button>
         <button id="ips" class="button">Show IPs</button>
+        <button id="showInfo" class="button">Show Params</button>
+        <button id="hideLegend" class="button">Hide Legend</button>
     </div>
     <script src="./assets/js/topology.js"></script>
     <script>
         const button1 = document.getElementById('locked');
         const button2 = document.getElementById('subnet');
         const button3 = document.getElementById('ips');
+        const button4 = document.getElementById('showInfo');
+        const button5 = document.getElementById('hideLegend');
 
         let locked = false;
         let subnet = false;
         let ips = false;
+        let showInfo = false;
+        let hideLegend = false;
 
         function updateButtons() {
             button1.classList.toggle('on', locked);
             button2.classList.toggle('on', subnet);
             button3.classList.toggle('on', ips);
+            button4.classList.toggle('on', showInfo);
+            button5.classList.toggle('on', hideLegend);
         }
 
         button1.addEventListener('click', () => {
@@ -50,6 +58,16 @@
 
         button3.addEventListener('click', () => {
             ips = !ips;
+            updateButtons();
+        });
+
+        button4.addEventListener('click', () => {
+            showInfo = !showInfo;
+            updateButtons();
+        });
+
+        button5.addEventListener('click', () => {
+            hideLegend = !hideLegend;
             updateButtons();
         });
     </script>

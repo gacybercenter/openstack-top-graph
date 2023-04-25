@@ -33,7 +33,6 @@ function handleFileSelect(event) {                                              
 }
 const fileInput = document.getElementById("file-input");
 fileInput.addEventListener("change", handleFileSelect, false);
-
 /**
  * Parses through the data extracting information like: nodes, links, and the title.
  * It also duplicates attached security groups and adds a root node.
@@ -45,6 +44,7 @@ function nodeMap(parsedContent, name) {
 
     const root = { name: "openstack", type: "Root" };                                   // Creates the root node
     const amounts = { Root: 1 };                                                        // Creates a dictionary for node amounts
+
     const nodes = [root];                                                               // Creates an array for nodes and adds the root node
     const links = [];                                                                   // Creates an array for links
     const sgNodes = [];                                                                 // Creates an array for duplicate security group nodes
@@ -67,64 +67,66 @@ function nodeMap(parsedContent, name) {
         }
     }
 
-for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Itterate through all of the resources
-    const name = `${resourceName}`;                                                 // Store the name
-    const type = resource.type.split("::")[2];                                      // Store the type
-    const data = resource.properties;                                               // Store the data (properties)
+    const parameters = parsedContent.parameters
 
-    const node = { name, type, data };                                              // Create a node object using { name, type, data }
-    amounts[type] = (amounts[type] || 0) + 1;
+    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Itterate through all of the resources
+        const name = `${resourceName}`;                                                 // Store the name
+        const type = resource.type.split("::")[2];                                      // Store the type
+        const data = resource.properties;                                               // Store the data (properties)
 
-    if (type === 'SecurityGroup') {                                                 // Add SecurityGroup nodes to the sgNodes array
-        sgNodes.push(node);
-    } else {                                                                        // Add all other nodes to the nodes array
-        nodes.push(node);
+        const node = { name, type, data };                                              // Create a node object using { name, type, data }
+        amounts[type] = (amounts[type] || 0) + 1;
+
+        if (type === 'SecurityGroup') {                                                 // Add SecurityGroup nodes to the sgNodes array
+            sgNodes.push(node);
+        } else {                                                                        // Add all other nodes to the nodes array
+            nodes.push(node);
+        }
+
+        if (type === 'Router') {                                                        // Attach all routers to the root node
+            links.push({ source: node, target: root });
+        }
     }
 
-    if (type === 'Router') {                                                        // Attach all routers to the root node
-        links.push({ source: node, target: root });
-    }
-}
-
-for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Iterate through all resources
-    const processProperty = (property, parentResourceName) => {                     // Add links between nodes based on what resources they get
-        if (typeof property === 'object') {
-            if (property['get_resource'] !== undefined) {
-                const target = nodes.find(n => n.name === parentResourceName);
-                const sourceName = property['get_resource'];
-                const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
-                if (source.type !== 'Net' || target.type !== 'Port') {              // Filter out all Net to Port links
-                    links.push({ source, target });
+    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Iterate through all resources
+        const processProperty = (property, parentResourceName) => {                     // Add links between nodes based on what resources they get
+            if (typeof property === 'object') {
+                if (property['get_resource'] !== undefined) {
+                    const target = nodes.find(n => n.name === parentResourceName);
+                    const sourceName = property['get_resource'];
+                    const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
+                    if (source.type !== 'Net' || target.type !== 'Port') {              // Filter out all Net to Port links
+                        links.push({ source, target });
+                    }
+                }
+                for (const [key, value] of Object.entries(property)) {                  // For each key, recurse the link finding process
+                    processProperty(value, parentResourceName);
                 }
             }
-            for (const [key, value] of Object.entries(property)) {                  // For each key, recurse the link finding process
-                processProperty(value, parentResourceName);
-            }
+        }
+
+        for (const [propertyName, property] of Object.entries(resource.properties)) {   // For each object, recurse the link finding process
+            processProperty(property, resourceName);
         }
     }
 
-    for (const [propertyName, property] of Object.entries(resource.properties)) {   // For each object, recurse the link finding process
-        processProperty(property, resourceName);
-    }
-}
-
-for (const sgNode of sgNodes) {                                                     // Duplicate linked SecurityGroup nodes
-    const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
-    const uniqueLinkedNodes = [...new Set(linkedNodes)];
-    if (uniqueLinkedNodes.length === 0) {
-        const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
-        nodes.push(newNode);
-        amounts['SecurityGroup'] = (amounts['SecurityGroup'] || 0) + 1;
-    } else {
-        for (const linkedNode of uniqueLinkedNodes) {                               // Link duplicate SecurityGroup nodes
+    for (const sgNode of sgNodes) {                                                     // Duplicate linked SecurityGroup nodes
+        const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
+        const uniqueLinkedNodes = [...new Set(linkedNodes)];
+        if (uniqueLinkedNodes.length === 0) {
             const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
             nodes.push(newNode);
-            links.push({ source: linkedNode, target: newNode });
+            amounts['SecurityGroup'] = (amounts['SecurityGroup'] || 0) + 1;
+        } else {
+            for (const linkedNode of uniqueLinkedNodes) {                               // Link duplicate SecurityGroup nodes
+                const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
+                nodes.push(newNode);
+                links.push({ source: linkedNode, target: newNode });
+            }
+            links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
         }
-        links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
     }
-}
-return { nodes, links, amounts, title };
+    return { nodes, links, amounts, title, parameters };
 }
 /**
  * Takes in a an object of nodes, links, and titles.
@@ -135,16 +137,17 @@ function drawNodes(nodesAndLinks) {
 
     const nodes = nodesAndLinks.nodes;                                                  // Separates the nodes from the input
     const links = nodesAndLinks.links;                                                  // Separates the links from the input
-    const amounts = nodesAndLinks.amounts
+    const amounts = nodesAndLinks.amounts                                               // Separates the amounts from the input
     const title = nodesAndLinks.title;                                                  // Separates the title from the input
 
+    const width = window.innerWidth                                                     // Stores the window width
+    const height = window.innerHeight                                                   // Stores the window height
+
+    const parameters = formatDataToText(nodesAndLinks.parameters);                      // Separates the heat template information from the input
     for (var node of nodes) {
         node.info = formatObject(node.data);                                            // Adds each node's data to itself as html
         node.ip = IpFromHtml(node.info);                                                // Adds each node's IP address from the html
     }
-
-    const width = window.innerWidth                                                     // Stores the window width
-    const height = window.innerHeight                                                   // Stores the window height
 
     const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];                 // Recores the unique node types in an array
     const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a',   // Defines GCC and AU colors
@@ -231,7 +234,7 @@ function drawNodes(nodesAndLinks) {
         .attr('fill-opacity', 0.2)
 
     function drawPerimeter(subnetNode, depth = 3, paddingAngle = 20) {                  // Draw a hull encompassing Subnet nodes and their connections
-        const linkedNodes = getLinkedNodes(subnetNode, depth);
+        const linkedNodes = getLinkedNodes(subnetNode, depth);                          // Recusivly finds all nodes linked to the subnet
         const perimeterNodes = [subnetNode, ...linkedNodes];                            // Adds all subnet elements to an array
         const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));      // Constructs the hull based on the perimeter nodes
         if (!hull) {                                                                    // Creates a null hull if there are no perimeter nodes
@@ -289,8 +292,7 @@ function drawNodes(nodesAndLinks) {
         .on('mouseenter', (event, d) => {
             const tooltip = d3.select('.tooltip');
             tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info}`);
-            tooltip.style('visibility', 'visible')
-                .style('text-align', 'left');
+            tooltip.style('visibility', 'visible');
         })
         .on('mousemove', (event) => {
             const tooltip = d3.select('.tooltip');
@@ -345,14 +347,14 @@ function drawNodes(nodesAndLinks) {
         .style('background-color', '#fff')
         .style('border-radius', '4px')
         .style('box-shadow', '0 2px 5px rgba(0, 0, 0, 0.3)')
-        .style('padding', '10px')
+        .style('padding', '7px')
         .style('font-size', '14px')
         .style('pointer-events', 'none')
         .style('line-height', '1.4')
-        .style('max-width', '300px')
-        .style('text-align', 'center');
+        .style('max-width', '240px')
+        .style('text-align', 'left');
 
-    const titleMaxWidth = width / 1.25;                                             // Set limits on the title width
+    const titleMaxWidth = width / 2;                                             // Set limits on the title width
 
     const top = svg.append('text')                                                  // Define the title
         .text(title)
@@ -371,7 +373,8 @@ function drawNodes(nodesAndLinks) {
 
     const legend = svg.append("g")                                                  // Define the legend
         .attr("class", "legend")
-        .attr("transform", "translate(10, 10)");
+        .attr("transform", "translate(10, 10)")
+        .style('visibility', 'visible');
 
     legend.selectAll("rect")                                                        // Add colors to the legend
         .data(legendData)
@@ -392,6 +395,34 @@ function drawNodes(nodesAndLinks) {
         .text(d => `${d.type} (${d.count})`)
         .style("font-size", "16px")
         .style("fill", "#333");
+
+    const info = svg.append("g") // create a new group element
+        .attr("class", "info")
+        .attr("transform", "translate(" + (width - width / 5 - 20) + ", 10)");
+
+    const textLines = parameters.split("\n");
+
+    info.append("rect") // add a rectangle for the background
+        .attr("width", width / 5)
+        .attr("height", textLines.length * 16 + 10) // adjust the height based on the number of lines
+        .style("fill", "#fff")
+        .style("stroke", "#333")
+        .style("stroke-width", "1px")
+
+    const text = info.append("text") // add the text content
+        .attr("x", 10)
+        .attr("y", 20)
+        .style("font-size", "12px")
+        .style("line-height", "1.2")
+        .style("text-align", "left");
+
+    text.selectAll("tspan")
+        .data(textLines)
+        .enter()
+        .append("tspan")
+        .text((d) => d)
+        .attr("x", 10)
+        .attr("dy", "1.4em"); // adjust the line spacing    
 
     var was_locked = false;
     function toggleLock() {                                                         // Lockes the nodes in place if toggled
@@ -452,6 +483,18 @@ function drawNodes(nodesAndLinks) {
                 force.alphaTarget(0.1).restart();
             }
         }
+
+        if (showInfo) {
+            info.style('visibility', 'visible');
+        } else {
+            info.style('visibility', 'hidden');
+        }
+                
+        if (hideLegend) {
+            legend.style('visibility', 'hidden');
+        } else {
+            legend.style('visibility', 'visible');
+        }
     }
 
     function drag(simulation) {                                                     // Manages the drag actions, called by nodes
@@ -497,6 +540,28 @@ function drawNodes(nodesAndLinks) {
             .on("drag", dragged)
             .on("end", dragended);
     }
+    /**
+     * Converts a parsed JSON or YAML object to a text string representation.
+     * @param {object} data - The parsed JSON or YAML object to format
+     * @param {number} indent - The indentation level, defaults to 0
+     * @returns {string} - The text string representation of the object
+     */
+    function formatDataToText(data, indent = 0) {
+        let text = '';
+        if (Array.isArray(data)) { // If data is an array:
+            data.forEach((value) => { // Iterate over its elements
+                text += ' '.repeat(indent) + '- ' + formatDataToText(value, indent + 2).replace(/\n/g, '\n' + ' '.repeat(indent + 2)) + '\n'; // Call formatDataToText recursively on each element, add an indentation level and a dash for each item, and replace new lines with the appropriate indentation
+            });
+        } else if (typeof data === 'object' && data !== null) { // If data is an object:
+            for (const [key, value] of Object.entries(data)) { // Iterate over its key-value pairs and call formatDataToText recursively on each value
+                text += ' '.repeat(indent) + '- ' + key + ': ' + formatDataToText(value, indent + 2).replace(/\n/g, '\n' + ' '.repeat(indent + 2)) + '\n'; // Add an indentation level, the key and a colon, and display the key-value pair on a new line, replacing new lines with the appropriate indentation
+            }
+        } else { // If data is a primitive type:
+            text += data; // Display it as is
+        }
+        return text;
+    }
+
     /**
      * Converts an object to an HTML string representation, recursively.
      * Duplicate values for a given key are separated by commas.
