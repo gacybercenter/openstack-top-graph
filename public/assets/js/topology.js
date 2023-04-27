@@ -15,19 +15,14 @@ function handleFileSelect(event) {                                              
     const reader = new FileReader();                                                    // Create a new FileReader object to read the contents of the file.
 
     reader.onload = function (event) {                                                  // Set up a callback function to handle the file load event.
-        try {
-            const fileContent = event.target.result;                                    // Get the file contents from the FileReader object.
-            const parsedContent = fileType === "yaml"                                   // Parse the file contents based on the file type.
-                ? jsyaml.load(fileContent)
-                : JSON.parse(fileContent);
+        const fileContent = event.target.result;                                        // Get the file contents from the FileReader object.
+        const parsedContent = fileType === "yaml"                                       // Parse the file contents based on the file type.
+            ? jsyaml.load(fileContent)
+            : JSON.parse(fileContent);
 
-            nodesAndLinks = nodeMap(parsedContent, file.name);                          // Construct a node map based on the parsed content.
+        nodesAndLinks = nodeMap(parsedContent, file.name);                              // Construct a node map based on the parsed content.
 
-            drawNodes(nodesAndLinks);
-
-        } catch (error) {                                                               // If there was an error parsing the file, log the error to the console.
-            console.error(`Error parsing ${fileType} file: ${error}`);
-        }
+        drawNodes(nodesAndLinks);
     };
     reader.readAsText(file, "UTF-8");                                                   // Read the file as text using UTF-8 encoding.
 }
@@ -36,9 +31,9 @@ fileInput.addEventListener("change", handleFileSelect, false);
 /**
  * Parses through the data extracting information like: nodes, links, and the title.
  * It also duplicates attached security groups and adds a root node.
- * @param {object} parsedContent - the parsed JAML or JSON
- * @param {object} name - the file name used in case the title can't be found
- * @returns {object} - the { nodes, links, and title }
+ * @param {object} parsedContent - The parsed JAML or JSON
+ * @param {object} name - The file name used in case the title can't be found
+ * @returns {object} - The { nodes, links, amounts, title, and parameters }
  */
 function nodeMap(parsedContent, name) {
 
@@ -50,21 +45,28 @@ function nodeMap(parsedContent, name) {
     const sgNodes = [];                                                                 // Creates an array for duplicate security group nodes
 
     let title;                                                                          // Parse the title from the YAML/JSON
-    try {
-        if (parsedContent.parameters.range_id.default) {                                // Check for the parameter range_id.default
-            title = parsedContent.parameters.range_id.default;
-        }
+    // try {
+    //     if (parsedContent.parameters.range_id.default) {                                // Check for the parameter range_id.default
+    //         title = parsedContent.parameters.range_id.default;
+    //     }
+    // } catch (error) {
+    //     try {
+    //         if (parsedContent.description) {                                            // Check for the description
+    //             title = parsedContent.description;
+    //         } else {
+    //             title = name;
+    //         }
+    //     } catch (error) {
+    //         console.log("Error occurred while getting title:", error);
+    //         title = "Title not found";
+    //     }
+    // }
+
+    try {                            // Check for the parameter range_id.default
+        title = name;
     } catch (error) {
-        try {
-            if (parsedContent.description) {                                            // Check for the description
-                title = parsedContent.description;
-            } else {
-                title = name;
-            }
-        } catch (error) {
-            console.log("Error occurred while getting title:", error);
-            title = name;
-        }
+        console.log("Error occurred while getting title:", error);
+        title = "Title not found";
     }
 
     const parameters = parsedContent.parameters
@@ -77,7 +79,7 @@ function nodeMap(parsedContent, name) {
         const node = { name, type, data };                                              // Create a node object using { name, type, data }
         amounts[type] = (amounts[type] || 0) + 1;
 
-        if (type === 'SecurityGroup') {                                                 // Add SecurityGroup nodes to the sgNodes array
+        if (type === 'SecurityGroup' || type === 'SoftwareConfig') {                                                 // Add SecurityGroup nodes to the sgNodes array
             sgNodes.push(node);
         } else {                                                                        // Add all other nodes to the nodes array
             nodes.push(node);
@@ -95,6 +97,9 @@ function nodeMap(parsedContent, name) {
                     const target = nodes.find(n => n.name === parentResourceName);
                     const sourceName = property['get_resource'];
                     const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
+                    if (target.type === 'RouterInterface' && source.type === 'Subnet'){
+                        target.data['fixed_ip'] = source.data['gateway_ip'];
+                    }
                     if (source.type !== 'Net' || target.type !== 'Port') {              // Filter out all Net to Port links
                         links.push({ source, target });
                     }
@@ -105,8 +110,10 @@ function nodeMap(parsedContent, name) {
             }
         }
 
-        for (const [propertyName, property] of Object.entries(resource.properties)) {   // For each object, recurse the link finding process
-            processProperty(property, resourceName);
+        if (resource.properties) {  // Check if properties exist
+            for (const [propertyName, property] of Object.entries(resource.properties)) {   // For each object, recurse the link finding process
+                processProperty(property, resourceName);
+            }
         }
     }
 
@@ -114,12 +121,12 @@ function nodeMap(parsedContent, name) {
         const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
         const uniqueLinkedNodes = [...new Set(linkedNodes)];
         if (uniqueLinkedNodes.length === 0) {
-            const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
+            const newNode = { name: sgNode.name, type: sgNode.type, data: sgNode.data };
             nodes.push(newNode);
-            amounts['SecurityGroup'] = (amounts['SecurityGroup'] || 0) + 1;
+            amounts.sgNode.type = (amounts.sgNode.type || 0) + 1;
         } else {
             for (const linkedNode of uniqueLinkedNodes) {                               // Link duplicate SecurityGroup nodes
-                const newNode = { name: sgNode.name, type: 'SecurityGroup', data: sgNode.data };
+                const newNode = { name: sgNode.name, type: sgNode.type, data: sgNode.data };
                 nodes.push(newNode);
                 links.push({ source: linkedNode, target: newNode });
             }
@@ -131,7 +138,7 @@ function nodeMap(parsedContent, name) {
 /**
  * Takes in a an object of nodes, links, and titles.
  * Generates a node map using d3 v7 and html.
- * @param {object} nodesAndLinks - The { nodes, links, and title }
+ * @param {object} nodesAndLinks - The { nodes, links, amounts, title, and parameters }
  */
 function drawNodes(nodesAndLinks) {
 
@@ -151,12 +158,12 @@ function drawNodes(nodesAndLinks) {
 
     const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];                 // Recores the unique node types in an array
     const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a',   // Defines GCC and AU colors
-        '#003359 ', '#A5ACAF', '#3CB6CE', '#00AEEF', '#64A0C8', '#44D62C'];
+        '#003359 ', '#A5ACAF', '#3CB6CE', '#00AEEF', '#64A0C8', '#44D62C']
 
     const legendData = uniqueNodeTypes.map((type, i) => ({                              // Assign a GCC and AU color and count to legend data
         type,
         count: amounts[type],
-        color: colors[i]
+        color: colors[i % colors.length]
     }));
 
     const colorScale = (function () {                                                   // Assign a GCC and AU color to each node
@@ -164,7 +171,7 @@ function drawNodes(nodesAndLinks) {
         const range = colors;
         const scale = {};
         domain.forEach((value, i) => {
-            scale[value] = range[i];
+            scale[value] = range[i % colors.length];
         });
         return function (type) {
             return scale[type];
@@ -183,6 +190,12 @@ function drawNodes(nodesAndLinks) {
         'FloatingIPAssociation': "./assets/img/os__neutron__floatingipassociation.svg",
         'ResourceGroup': "./assets/img/os__heat__resourcegroup.svg",
         'SecurityGroup': "./assets/img/os__neutron__securitygroup.svg",
+        'ExtraRoute': "./assets/img/extraroute.svg",
+        'WaitCondition': "./assets/img/waitcondition.svg",
+        'WaitConditionHandle': "./assets/img/waitconditionhandle.svg",
+        'MultipartMime': "./assets/img/multipartmime.svg",
+        'SoftwareConfig': "./assets/img/softwareconfig.svg",
+        'RandomString': "./assets/img/randomstring.svg",
         'Other': "./assets/img/question__mark.png"
     }
 
@@ -198,6 +211,12 @@ function drawNodes(nodesAndLinks) {
         'FloatingIPAssociation': 6,
         'ResourceGroup': 10,
         'SecurityGroup': 6,
+        'ExtraRoute': 7,
+        'WaitCondition': 6,
+        'WaitConditionHandle': 10,
+        'MultipartMime': 5,
+        'SoftwareConfig': 5,
+        'RandomString': 7,
         'Other': 8
     };
 
@@ -351,10 +370,11 @@ function drawNodes(nodesAndLinks) {
         .style('font-size', '14px')
         .style('pointer-events', 'none')
         .style('line-height', '1.4')
-        .style('max-width', '240px')
-        .style('text-align', 'left');
+        .style('max-width', width / 5 + 'px')
+        .style('text-align', 'left')
+        .style('word-wrap', 'break-word');
 
-    const titleMaxWidth = width / 2;                                             // Set limits on the title width
+    const titleMaxWidth = width / 1.5;                                             // Set limits on the title width
 
     const top = svg.append('text')                                                  // Define the title
         .text(title)
@@ -489,7 +509,7 @@ function drawNodes(nodesAndLinks) {
         } else {
             info.style('visibility', 'hidden');
         }
-                
+
         if (hideLegend) {
             legend.style('visibility', 'hidden');
         } else {
