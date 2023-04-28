@@ -20,9 +20,10 @@ function handleFileSelect(event) {                                              
             ? jsyaml.load(fileContent)
             : JSON.parse(fileContent);
 
-        nodesAndLinks = nodeMap(parsedContent, file.name);                              // Construct a node map based on the parsed content.
+        nodesAndLinks = nodeMap(parsedContent,                                          // Construct a node map based on the parsed content.
+            file.name);
 
-        drawNodes(nodesAndLinks);
+        drawNodes(nodesAndLinks, parsedContent.description);
     };
     reader.readAsText(file, "UTF-8");                                                   // Read the file as text using UTF-8 encoding.
 }
@@ -32,7 +33,7 @@ fileInput.addEventListener("change", handleFileSelect, false);
  * Parses through the data extracting information like: nodes, links, and the title.
  * It also duplicates attached security groups and adds a root node.
  * @param {object} parsedContent - The parsed JAML or JSON
- * @param {object} name - The file name used in case the title can't be found
+ * @param {object} name - The JAML or JSON file name
  * @returns {object} - The { nodes, links, amounts, title, and parameters }
  */
 function nodeMap(parsedContent, name) {
@@ -45,28 +46,12 @@ function nodeMap(parsedContent, name) {
     const sgNodes = [];                                                                 // Creates an array for duplicate security group nodes
 
     let title;                                                                          // Parse the title from the YAML/JSON
-    // try {
-    //     if (parsedContent.parameters.range_id.default) {                                // Check for the parameter range_id.default
-    //         title = parsedContent.parameters.range_id.default;
-    //     }
-    // } catch (error) {
-    //     try {
-    //         if (parsedContent.description) {                                            // Check for the description
-    //             title = parsedContent.description;
-    //         } else {
-    //             title = name;
-    //         }
-    //     } catch (error) {
-    //         console.log("Error occurred while getting title:", error);
-    //         title = "Title not found";
-    //     }
-    // }
 
     try {                            // Check for the parameter range_id.default
         title = name;
     } catch (error) {
         console.log("Error occurred while getting title:", error);
-        title = "Title not found";
+        title = "No Title";
     }
 
     const parameters = parsedContent.parameters
@@ -97,7 +82,7 @@ function nodeMap(parsedContent, name) {
                     const target = nodes.find(n => n.name === parentResourceName);
                     const sourceName = property['get_resource'];
                     const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
-                    if (target.type === 'RouterInterface' && source.type === 'Subnet'){
+                    if (target.type === 'RouterInterface' && source.type === 'Subnet') {
                         target.data['fixed_ip'] = source.data['gateway_ip'];
                     }
                     if (source.type !== 'Net' || target.type !== 'Port') {              // Filter out all Net to Port links
@@ -140,12 +125,13 @@ function nodeMap(parsedContent, name) {
  * Generates a node map using d3 v7 and html.
  * @param {object} nodesAndLinks - The { nodes, links, amounts, title, and parameters }
  */
-function drawNodes(nodesAndLinks) {
+function drawNodes(nodesAndLinks, description) {
 
     const nodes = nodesAndLinks.nodes;                                                  // Separates the nodes from the input
     const links = nodesAndLinks.links;                                                  // Separates the links from the input
     const amounts = nodesAndLinks.amounts                                               // Separates the amounts from the input
-    const title = nodesAndLinks.title;                                                  // Separates the title from the input
+
+    const title = nodesAndLinks.title;                                             // Separates the title from the input
 
     const width = window.innerWidth                                                     // Stores the window width
     const height = window.innerHeight                                                   // Stores the window height
@@ -416,15 +402,32 @@ function drawNodes(nodesAndLinks) {
         .style("font-size", "16px")
         .style("fill", "#333");
 
+    const descriptionMaxWidth = width / 4;
+
+    legend.append("text")
+        .attr("x", width * 3/4 - 20)
+        .attr("y", 15)
+        .text(description)
+        .style("font-size", "20px")
+        .style("fill", "#333")
+        .style("text-decoration", "underline")
+        .attr("textLength", function () {
+            const length = this.getComputedTextLength();
+            return length > descriptionMaxWidth ? descriptionMaxWidth : length;
+        })
+        .attr("lengthAdjust", "spacingAndGlyphs")
+        .append("title")
+        .text(description);
+
     const info = svg.append("g") // create a new group element
         .attr("class", "info")
-        .attr("transform", "translate(" + (width - width / 5 - 20) + ", 10)");
+        .attr("transform", "translate(" + (width - width / 4 - 10) + ", 40)");
 
     const textLines = parameters.split("\n");
 
     info.append("rect") // add a rectangle for the background
-        .attr("width", width / 5)
-        .attr("height", textLines.length * 16 + 10) // adjust the height based on the number of lines
+        .attr("width", descriptionMaxWidth)
+        .attr("height", textLines.length * 16 + 30) // adjust the height based on the number of lines
         .style("fill", "#fff")
         .style("stroke", "#333")
         .style("stroke-width", "1px")
