@@ -29,6 +29,7 @@ function handleFileSelect(event) {                                              
 }
 const fileInput = document.getElementById("file-input");
 fileInput.addEventListener("change", handleFileSelect, false);
+
 /**
  * Parses through the data extracting information like: nodes, links, and the title.
  * It also duplicates attached security groups and adds a root node.
@@ -37,80 +38,93 @@ fileInput.addEventListener("change", handleFileSelect, false);
  * @returns {object} - The { nodes, links, amounts, title, and parameters }
  */
 function nodeMap(parsedContent, name) {
+    const root = { name: "openstack", type: "Root" };
+    const amounts = { Root: 1 };
+    const nodes = [root];
+    const links = [];
+    const sgNodes = [];
+    let cluster_count = parsedContent.parameters.cluster_count.default || 0
 
-    const root = { name: "openstack", type: "Root" };                                   // Creates the root node
-    const amounts = { Root: 1 };                                                        // Creates a dictionary for node amounts
+    console.log(cluster_count);
 
-    const nodes = [root];                                                               // Creates an array for nodes and adds the root node
-    const links = [];                                                                   // Creates an array for links
-    const sgNodes = [];                                                                 // Creates an array for duplicate security group nodes
+    let title = name || "No name found.";
 
-    let title;                                                                          // Parse the title from the YAML/JSON
-
-    try {                            // Check for the parameter range_id.default
-        title = name;
-    } catch (error) {
-        console.log("Error occurred while getting title:", error);
-        title = "No Title";
-    }
-
-    const parameters = parsedContent.parameters
-
-    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Itterate through all of the resources
-        const name = `${resourceName}`;                                                 // Store the name
-        const type = resource.type.split("::")[2];                                      // Store the type
-        const data = resource.properties;                                               // Store the data (properties)
-
-        const node = { name, type, data };                                              // Create a node object using { name, type, data }
+    const createNode = (resourceName, resource, cluster_count = 0) => {
+        const name = resourceName;
+        const type = resource.type.split("::")[2];
+        const data = resource.properties;
+        const node = { name, type, data };
         amounts[type] = (amounts[type] || 0) + 1;
 
-        if (type === 'SecurityGroup' || type === 'SoftwareConfig') {                                                 // Add SecurityGroup nodes to the sgNodes array
+        if (type === 'SecurityGroup' || type === 'SoftwareConfig')
+        {
             sgNodes.push(node);
-        } else {                                                                        // Add all other nodes to the nodes array
-            nodes.push(node);
         }
-
-        if (type === 'Router') {                                                        // Attach all routers to the root node
-            links.push({ source: node, target: root });
-        }
-    }
-
-    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {   // Iterate through all resources
-        const processProperty = (property, parentResourceName) => {                     // Add links between nodes based on what resources they get
-            if (typeof property === 'object') {
-                if (property['get_resource'] !== undefined) {
-                    const target = nodes.find(n => n.name === parentResourceName);
-                    const sourceName = property['get_resource'];
-                    const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
-                    if (target.type === 'RouterInterface' && source.type === 'Subnet') {
-                        target.data['fixed_ip'] = source.data['gateway_ip'];
+        else if (type === 'ResourceGroup')
+        {
+            for (const [propertyName, property] of Object.entries(data)) {
+                if (propertyName === "resource_def") {
+                    for (let index = 1; index <= cluster_count; index++) {
+                        createNode(property.properties.name.replace("%index%", index), property);
                     }
-                    if (source.type !== 'Net' || target.type !== 'Port') {              // Filter out all Net to Port links
-                        links.push({ source, target });
-                    }
-                }
-                for (const [key, value] of Object.entries(property)) {                  // For each key, recurse the link finding process
-                    processProperty(value, parentResourceName);
                 }
             }
+            nodes.push(node);
+        } 
+        else
+        {
+            nodes.push(node);
         }
+        if (type === 'Router')
+        {
+            links.push({ source: node, target: root });
+        }
+    };
 
-        if (resource.properties) {  // Check if properties exist
-            for (const [propertyName, property] of Object.entries(resource.properties)) {   // For each object, recurse the link finding process
+    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
+        createNode(resourceName, resource, cluster_count);
+    }
+
+    const processProperty = (property, parentResourceName) => {
+        if (Array.isArray(property)) {
+            for (const element of property) {
+                processProperty(element, parentResourceName);
+            }
+        } else if (typeof property === 'object') {
+            if (property['get_resource'] !== undefined) {
+                const target = nodes.find(n => n.name === parentResourceName);
+                const sourceName = property['get_resource'];
+                const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
+                if (target.type === 'RouterInterface' && source.type === 'Subnet') {
+                    target.data['fixed_ip'] = source.data['gateway_ip'];
+                }
+                if (source.type !== 'Net' || target.type !== 'Port') {
+                    links.push({ source, target });
+                }
+            }
+            for (const [key, value] of Object.entries(property)) {
+                processProperty(value, parentResourceName);
+            }
+        }
+    };
+
+    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
+        if (resource.properties) {
+            for (const [propertyName, property] of Object.entries(resource.properties)) {
                 processProperty(property, resourceName);
             }
         }
     }
 
-    for (const sgNode of sgNodes) {                                                     // Duplicate linked SecurityGroup nodes
+    const createSGNode = (sgNode) => {
         const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
         const uniqueLinkedNodes = [...new Set(linkedNodes)];
         if (uniqueLinkedNodes.length === 0) {
             const newNode = { name: sgNode.name, type: sgNode.type, data: sgNode.data };
             nodes.push(newNode);
-            amounts.sgNode.type = (amounts.sgNode.type || 0) + 1;
+            amounts[sgNode.type] = (amounts[sgNode.type] || 0) + 1;
         } else {
-            for (const linkedNode of uniqueLinkedNodes) {                               // Link duplicate SecurityGroup nodes
+            for (const linkedNode of uniqueLinkedNodes) {
                 const newNode = { name: sgNode.name, type: sgNode.type, data: sgNode.data };
                 nodes.push(newNode);
                 links.push({ source: linkedNode, target: newNode });
@@ -118,13 +132,21 @@ function nodeMap(parsedContent, name) {
             links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
         }
     }
-    return { nodes, links, amounts, title, parameters };
+
+    for (const sgNode of sgNodes) {
+        createSGNode(sgNode);
+    }
+
+    console.log(links);
+
+    return { nodes, links, amounts, title, parameters: parsedContent.parameters };
 }
+
 /**
- * Takes in a an object of nodes, links, and titles.
- * Generates a node map using d3 v7 and html.
- * @param {object} nodesAndLinks - The { nodes, links, amounts, title, and parameters }
- */
+* Takes in a an object of nodes, links, and titles.
+* Generates a node map using d3 v7 and html.
+* @param {object} nodesAndLinks - The { nodes, links, amounts, title, and parameters }
+*/
 function drawNodes(nodesAndLinks, description) {
 
     const nodes = nodesAndLinks.nodes;                                                  // Separates the nodes from the input
@@ -182,6 +204,8 @@ function drawNodes(nodesAndLinks, description) {
         'MultipartMime': "./assets/img/multipartmime.svg",
         'SoftwareConfig': "./assets/img/softwareconfig.svg",
         'RandomString': "./assets/img/randomstring.svg",
+        'RecordSet': "./assets/img/recordset.svg",
+        'Zone': "./assets/img/zone.svg",
         'Other': "./assets/img/question__mark.png"
     }
 
@@ -203,6 +227,8 @@ function drawNodes(nodesAndLinks, description) {
         'MultipartMime': 5,
         'SoftwareConfig': 5,
         'RandomString': 7,
+        'RecordSet': 5,
+        'Zone': 7,
         'Other': 8
     };
 
@@ -404,11 +430,13 @@ function drawNodes(nodesAndLinks, description) {
 
     const descriptionMaxWidth = width / 4;
 
-    legend.append("text")
-        .attr("x", width * 3/4 - 20)
-        .attr("y", 15)
+    const info = svg.append("g") // create a new group element
+        .attr("class", "info")
+        .attr("transform", "translate(" + (width * 3 / 4 - 20) + ", 30)");
+
+    info.append("text")
         .text(description)
-        .style("font-size", "20px")
+        .style("font-size", "24px")
         .style("fill", "#333")
         .style("text-decoration", "underline")
         .attr("textLength", function () {
@@ -419,13 +447,11 @@ function drawNodes(nodesAndLinks, description) {
         .append("title")
         .text(description);
 
-    const info = svg.append("g") // create a new group element
-        .attr("class", "info")
-        .attr("transform", "translate(" + (width - width / 4 - 10) + ", 40)");
-
     const textLines = parameters.split("\n");
 
     info.append("rect") // add a rectangle for the background
+        .attr("x", 0)
+        .attr("y", 10)
         .attr("width", descriptionMaxWidth)
         .attr("height", textLines.length * 16 + 30) // adjust the height based on the number of lines
         .style("fill", "#fff")
