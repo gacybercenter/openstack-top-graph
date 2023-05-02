@@ -43,47 +43,75 @@ function nodeMap(parsedContent, name) {
     const nodes = [root];
     const links = [];
     const sgNodes = [];
-    let cluster_count = parsedContent.parameters.cluster_count.default || 0
-
-    console.log(cluster_count);
 
     let title = name || "No name found.";
 
-    const createNode = (resourceName, resource, cluster_count = 0) => {
+    const createNode = (resourceName, resource, count = 0) => {
         const name = resourceName;
         const type = resource.type.split("::")[2];
         const data = resource.properties;
         const node = { name, type, data };
         amounts[type] = (amounts[type] || 0) + 1;
 
-        if (type === 'SecurityGroup' || type === 'SoftwareConfig')
-        {
+        if (type === 'SecurityGroup' || type === 'SoftwareConfig') {
             sgNodes.push(node);
         }
-        else if (type === 'ResourceGroup')
-        {
+        else if (type === 'ResourceGroup') {
+            for (const [propertyName, property] of Object.entries(data)) {
+                if (propertyName === "count") {
+                    count = parsedContent.parameters[property.get_param].default;
+                }
+            }
             for (const [propertyName, property] of Object.entries(data)) {
                 if (propertyName === "resource_def") {
-                    for (let index = 1; index <= cluster_count; index++) {
-                        createNode(property.properties.name.replace("%index%", index), property);
+                    for (let index = 1; index <= count; index++) {
+                        let newProp = replaceIndex(property, index);
+                        createNode(property.properties.name.replace('%index%', index), newProp);
                     }
                 }
             }
-            nodes.push(node);
-        } 
-        else
-        {
+            // nodes.push(node);
+        }
+        else {
             nodes.push(node);
         }
-        if (type === 'Router')
-        {
+        if (type === 'Router') {
             links.push({ source: node, target: root });
         }
     };
 
-    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
-        createNode(resourceName, resource, cluster_count);
+    function replaceIndex(object, index) {
+        if (typeof object === 'string') {
+            return object.replace('%index%', index);
+        } else if (Array.isArray(object)) {
+            return object.map(item => replaceIndex(item, index));
+        } else if (typeof object === 'object' && object !== null) {
+            const newObj = {};
+            for (const [key, value] of Object.entries(object)) {
+                newObj[key] = replaceIndex(value, index);
+            }
+            return newObj;
+        } else {
+            return object;
+        }
     }
+
+    const createSGNode = (sgNode) => {
+        const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
+        const uniqueLinkedNodes = [...new Set(linkedNodes)];
+        if (uniqueLinkedNodes.length === 0) {
+            const newNode = { ...sgNode };
+            nodes.push(newNode);
+            amounts[sgNode.type] = (amounts[sgNode.type] || 0) + 1;
+        } else {
+            for (const linkedNode of uniqueLinkedNodes) {
+                const newNode = { ...sgNode };
+                nodes.push(newNode);
+                links.push({ source: linkedNode, target: newNode });
+            }
+            links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
+        }
+    };
 
     const processProperty = (property, parentResourceName) => {
         if (Array.isArray(property)) {
@@ -91,15 +119,17 @@ function nodeMap(parsedContent, name) {
                 processProperty(element, parentResourceName);
             }
         } else if (typeof property === 'object') {
-            if (property['get_resource'] !== undefined) {
+            if (property.get_resource !== undefined || property.port !== undefined) {
                 const target = nodes.find(n => n.name === parentResourceName);
-                const sourceName = property['get_resource'];
+                const sourceName = property.get_resource || property.port;
                 const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
-                if (target.type === 'RouterInterface' && source.type === 'Subnet') {
-                    target.data['fixed_ip'] = source.data['gateway_ip'];
-                }
-                if (source.type !== 'Net' || target.type !== 'Port') {
-                    links.push({ source, target });
+                if (source && target) {
+                    if (target.type === 'RouterInterface' && source.type === 'Subnet') {
+                        target.data['fixed_ip'] = source.data['gateway_ip'];
+                    }
+                    if (source.type !== 'Net' || target.type !== 'Port') {
+                        links.push({ source, target });
+                    }
                 }
             }
             for (const [key, value] of Object.entries(property)) {
@@ -109,35 +139,25 @@ function nodeMap(parsedContent, name) {
     };
 
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
-        if (resource.properties) {
-            for (const [propertyName, property] of Object.entries(resource.properties)) {
-                processProperty(property, resourceName);
+        createNode(resourceName, resource);
+    }
+
+    console.log(parsedContent.resources);
+    console.log(nodes);
+
+    for (const node of nodes) {
+        if (node.data) {
+            for (const [propertyName, property] of Object.entries(node.data)) {
+                processProperty(property, node.name);
             }
         }
     }
 
-    const createSGNode = (sgNode) => {
-        const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
-        const uniqueLinkedNodes = [...new Set(linkedNodes)];
-        if (uniqueLinkedNodes.length === 0) {
-            const newNode = { name: sgNode.name, type: sgNode.type, data: sgNode.data };
-            nodes.push(newNode);
-            amounts[sgNode.type] = (amounts[sgNode.type] || 0) + 1;
-        } else {
-            for (const linkedNode of uniqueLinkedNodes) {
-                const newNode = { name: sgNode.name, type: sgNode.type, data: sgNode.data };
-                nodes.push(newNode);
-                links.push({ source: linkedNode, target: newNode });
-            }
-            links.filter(l => l.source.name === sgNode.name).forEach(l => links.splice(links.indexOf(l), 1));
+    if (sgNodes) {
+        for (const sgNode of sgNodes) {
+            createSGNode(sgNode);
         }
     }
-
-    for (const sgNode of sgNodes) {
-        createSGNode(sgNode);
-    }
-
-    console.log(links);
 
     return { nodes, links, amounts, title, parameters: parsedContent.parameters };
 }
@@ -215,8 +235,8 @@ function drawNodes(nodesAndLinks, description) {
         'Subnet': 16,
         'Router': 14,
         'RouterInterface': 7,
-        'Server': 12,
-        'Port': 8,
+        'Server': 10,
+        'Port': 7,
         'FloatingIP': 8,
         'FloatingIPAssociation': 6,
         'ResourceGroup': 10,
@@ -224,7 +244,7 @@ function drawNodes(nodesAndLinks, description) {
         'ExtraRoute': 7,
         'WaitCondition': 6,
         'WaitConditionHandle': 10,
-        'MultipartMime': 5,
+        'MultipartMime': 10,
         'SoftwareConfig': 5,
         'RandomString': 7,
         'RecordSet': 5,
@@ -436,7 +456,7 @@ function drawNodes(nodesAndLinks, description) {
 
     info.append("text")
         .text(description)
-        .style("font-size", "24px")
+        .style("font-size", "16px")
         .style("fill", "#333")
         .style("text-decoration", "underline")
         .attr("textLength", function () {
