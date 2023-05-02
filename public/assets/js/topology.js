@@ -66,7 +66,11 @@ function nodeMap(parsedContent, name) {
                 if (propertyName === "resource_def") {
                     for (let index = 1; index <= count; index++) {
                         let newProp = replaceIndex(property, index);
-                        createNode(property.properties.name.replace('%index%', index), newProp);
+                        let newName = property.properties.name.replace('%index%', index);
+                        if (newName === property.properties.name) {
+                            newName = property.properties.name + '_' + index;
+                        }
+                        createNode(newName, newProp);
                     }
                 }
             }
