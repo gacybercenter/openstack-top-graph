@@ -1,5 +1,7 @@
 import {
-    hotFunctions
+    getParam,
+    strReplace,
+    listJoin
 } from "./modules/hotFunctions.js";
 
 import {
@@ -38,7 +40,10 @@ function handleFileSelect(event) {                                              
             ? jsyaml.load(fileContent)
             : JSON.parse(fileContent);
 
-        const templateObj = parsedContent;
+        parsedContent.parameters['OS::stack_name'] = {type: 'string', default: file.name.split('.')[0]};
+        var templateObj = getParam(parsedContent);
+        templateObj = strReplace(templateObj);
+        templateObj = listJoin(templateObj);
 
         console.log(templateObj);
 
@@ -83,7 +88,7 @@ function nodeMap(parsedContent, name) {
             case 'ResourceGroup':
                 for (const [property_name, property] of Object.entries(data)) {        // Find the `count` property and set `count` to its value.
                     if (property_name === "count") {
-                        count = parsedContent.parameters[property.get_param].default;
+                        count = property;
                         break;
                     }
                 }
@@ -109,10 +114,10 @@ function nodeMap(parsedContent, name) {
         }
     }
 
-    function processProperty (property, parentResourceName) {
+    function createLink(property, parentResourceName) {
         if (Array.isArray(property)) {
             for (const element of property) {
-                processProperty(element, parentResourceName);
+                createLink(element, parentResourceName);
             }
         } else if (typeof property === 'object') {
             if (property.get_resource !== undefined || property.port !== undefined) {
@@ -129,7 +134,7 @@ function nodeMap(parsedContent, name) {
                 }
             }
             for (const [key, value] of Object.entries(property)) {
-                processProperty(value, parentResourceName);
+                createLink(value, parentResourceName);
             }
         }
     }
@@ -143,7 +148,7 @@ function nodeMap(parsedContent, name) {
     for (const node of nodes) {
         if (node.data) {
             for (const [propertyName, property] of Object.entries(node.data)) {
-                processProperty(property, node.name);
+                createLink(property, node.name);
             }
         }
     }
@@ -346,7 +351,6 @@ function drawNodes(nodesAndLinks, description) {
             tooltip.style('left', (event.pageX - (tooltip.node().getBoundingClientRect().width / 2)) + 'px');
         })
         .on('mouseleave', () => {
-            svg.attr("cursor", "crosshair");
             const tooltip = d3.select('.tooltip');
             tooltip.style('visibility', 'hidden');
         })
@@ -566,7 +570,6 @@ function drawNodes(nodesAndLinks, description) {
 
         function dragstarted(event) {                                               // Manages the begining of a drag
             if (!event.active) simulation.alphaTarget(0.3).restart();
-            svg.attr("cursor", "grab");
 
             x = event.subject.x;
             y = event.subject.y;
@@ -576,7 +579,6 @@ function drawNodes(nodesAndLinks, description) {
         }
 
         function dragged(event) {                                                   // Manages the middle of a drag
-            svg.attr("cursor", "grabbing");
 
             const transform = d3.zoomTransform(svg.node());
 
@@ -592,7 +594,6 @@ function drawNodes(nodesAndLinks, description) {
 
         function dragended(event) {                                                 // Manages the end of a drag
             if (!event.active) simulation.alphaTarget(0);
-            svg.attr("cursor", "crosshair");
 
             if (!locked) {
                 event.subject.fx = null;

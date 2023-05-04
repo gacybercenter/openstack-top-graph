@@ -1,40 +1,77 @@
-function hotFunctions(parsedContent) {
-    for (const [key, value] of Object.entries(parsedContent)) {
-        switch (key) {
-            case 'list_join:':
-                if (
-                    typeof value[1] === 'object' ||
-                    typeof value[2] === 'object'
-                ) {
-                    hotFunctions(value);
-                }
-                if (Array.isArray(value[1])) {
-                    parsedContent['name'] = value[1].join('');
-                } else {
-                    parsedContent['name'] = value.join('');
-                }
-                delete parsedContent['list_join:'];
-                break;
-            case 'get_param:':
-                if (parsedContent.parameters.hasOwnProperty(key)) {
-                    value = parsedContent.parameters[key];
-                }
-                break;
-            default:
-                if (typeof value === 'object' && value !== null) {
-                    if (Array.isArray(value)) {
-                        for (const element of value) {
-                            hotFunctions(element);
-                        }
-                    } else {
-                        hotFunctions(value);
-                    }
-                }
-                break;
+function getParam(parsedContent, obj = parsedContent.resources, parameters = parsedContent.parameters) {
+    for (const [key, value] of Object.entries(obj)) {
+        if (value.get_param) {
+            const parameterName = value.get_param;
+            if (parameters[parameterName] !== undefined) {
+                obj[key] = parameters[parameterName].default;
+            }
+        }
+        else if (typeof value === 'object') {
+            getParam(parsedContent, value, parameters);
+        }
+        else if (Array.isArray(value)) {
+            value.forEach((item) => {
+                getParam(parsedContent, item, parameters);
+            });
         }
     }
+    return parsedContent;
 }
 
+function strReplace(parsedContent, obj = parsedContent.resources) {
+    for (const [key, value] of Object.entries(obj)) {
+        if (value.str_replace) {
+            const template = value.str_replace.template;
+            const params = value.str_replace.params;
+            for (const [paramName, param] of Object.entries(params)) {
+                template.replace(paramName, param);
+            }
+            obj[key] = template;
+        }
+        else if (typeof value === 'object') {
+            strReplace(parsedContent, value);
+        }
+        else if (Array.isArray(value)) {
+            value.forEach((item) => {
+                strReplace(parsedContent, item);
+            });
+        }
+    }
+    return parsedContent;
+}
+
+function listJoin(parsedContent, obj = parsedContent.resources) {
+    for (const [key, value] of Object.entries(obj)) {
+        if (value.list_join) {
+            const delimiter = value.list_join[0];
+            const items = value.list_join.slice(1);
+            const joined = items
+                .flat(Infinity)
+                .map(item => {
+                    if (typeof item === 'object') {
+                        return JSON.stringify(item);
+                    } else {
+                        return item.toString();
+                    }
+                })
+                .join(delimiter);
+            obj[key] = joined;
+        }
+        else if (typeof value === 'object') {
+            listJoin(parsedContent, value);
+        }
+        else if (Array.isArray(value)) {
+            value.forEach((item) => {
+                listJoin(parsedContent, item);
+            });
+        }
+    }
+    return parsedContent;
+}
+
+
 export {
-    hotFunctions
+    getParam,
+    strReplace,
+    listJoin
 };
