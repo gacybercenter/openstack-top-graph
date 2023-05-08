@@ -1,6 +1,8 @@
 function createSGNode(sgNode, nodes, links, amounts) {
-    const linkedNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
-    const uniqueLinkedNodes = [...new Set(linkedNodes)];
+    const targetNodes = links.filter(l => l.source.name === sgNode.name).map(l => l.target);
+    const sourceNodes = links.filter(l => l.target.name === sgNode.name).map(l => l.source);
+    const uniqueLinkedNodes = [...new Set([...targetNodes, ...sourceNodes])];
+    
     if (uniqueLinkedNodes.length === 0) {
         const newNode = { ...sgNode };
         nodes.push(newNode);

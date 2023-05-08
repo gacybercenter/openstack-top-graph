@@ -46,11 +46,11 @@ function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
         for (const [objKey, value] of Object.entries(obj)) {                        // Iterate over its key-value pairs and call formatObject recursively on each value
             const currentKey = objKey === 'get_resource' ? parentKey : objKey;      // parentKey for get_resource objects, otherwise objKey
             if (                                                                    // Ignore specific keys
-                currentKey !== 'template' &&
+                // currentKey !== 'template' &&
                 currentKey !== 'get_param' &&
                 currentKey !== 'user_data_format' &&
                 currentKey !== 'list_join' &&
-                currentKey !== 'name'
+                currentKey !== 'config'
             ) {
                 html += formatObject(value,                                         // Call formatObject recursively on each currentKey entry
                     currentKey,

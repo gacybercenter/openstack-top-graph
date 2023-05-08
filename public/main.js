@@ -1,6 +1,7 @@
 import {
     getParam,
     strReplace,
+    getFile,
     listJoin
 } from "./modules/hotFunctions.js";
 
@@ -18,44 +19,91 @@ import {
     replaceIndex
 } from "./modules/utilityFunctions.js";
 
+const fileInput = document.getElementById("file-input");
+const textInput = document.getElementById("text-input");
+
+fileInput.addEventListener("change", handleFileSelect, false);
+textInput.addEventListener("change", handleTextSelect, false);
+
 /**
  * Processes files inputed into the file container.
  * Can process YAML and JSON Heat Template files.
  * Turns a Heat Template into an interactive topological network graph
- * @param {object} event - The inputted JAML or JSON Heat Template
+ * @param {object} event - The inputted JAML or JSON Heat Template file
  */
-function handleFileSelect(event) {                                                      // Define a function to handle file selection.
+function handleFileSelect(event) {
+    try {
+        const file = event.target.files[0];                                                 // Get the selected file.
+        const isYaml = file.name.endsWith(".yaml")                                          // Check if the file is in YAML or JSON format.
+            || file.name.endsWith(".yml");
+        const fileType = isYaml ? "yaml" : "json";
 
-    const file = event.target.files[0];                                                 // Get the selected file.
+        const reader = new FileReader();                                                    // Create a new FileReader object to read the contents of the file.
 
-    const isYaml = file.name.endsWith(".yaml")                                          // Check if the file is in YAML or JSON format.
-        || file.name.endsWith(".yml");
-    const fileType = isYaml ? "yaml" : "json";
+        reader.onload = function (event) {                                                  // Set up a callback function to handle the file load event.
+            const fileContent = event.target.result;                                        // Get the file contents from the FileReader object.
+            const parsedContent = fileType === "yaml"                                       // Parse the file contents based on the file type.
+                ? jsyaml.load(fileContent)
+                : JSON.parse(fileContent);
 
-    const reader = new FileReader();                                                    // Create a new FileReader object to read the contents of the file.
+            const name = file.name.split('.')[0];
+            parsedContent.parameters['OS::stack_name'] = { type: 'string', default: name };
 
-    reader.onload = function (event) {                                                  // Set up a callback function to handle the file load event.
-        const fileContent = event.target.result;                                        // Get the file contents from the FileReader object.
-        const parsedContent = fileType === "yaml"                                       // Parse the file contents based on the file type.
-            ? jsyaml.load(fileContent)
-            : JSON.parse(fileContent);
+            var templateObj = getParam(parsedContent);
+            templateObj = getFile(templateObj);
+            templateObj = strReplace(templateObj);
+            templateObj = listJoin(templateObj);
 
-        parsedContent.parameters['OS::stack_name'] = {type: 'string', default: file.name.split('.')[0]};
+            const nodesAndLinks = nodeMap(templateObj,                                      // Construct a node map based on the parsed content.
+                name);
+
+            drawNodes(nodesAndLinks, templateObj.description);
+        };
+        reader.readAsText(file, "UTF-8");                                                   // Read the file as text using UTF-8 encoding.
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    }
+}
+
+/**
+ * Processes text inputed into the text container.
+ * Can process YAML and JSON Heat Template text.
+ * Turns a Heat Template into an interactive topological network graph
+ * @param {object} event - The inputted JAML or JSON Heat Template text
+ */
+function handleTextSelect(event) {
+    try {
+        const parent = document.querySelector('svg');
+        if (parent) {
+            while (parent.firstChild) {
+                parent.removeChild(parent.firstChild);
+            }
+        }
+
+        const inputText = event.target.value;
+        let parsedContent;
+        try {
+            parsedContent = jsyaml.safeLoad(inputText);
+        } catch {
+            parsedContent = JSON.parse(inputText);
+        }
+
+        const file = { name: "TEMPLATE" }
+        parsedContent.parameters['OS::stack_name'] = { type: 'string', default: file.name };
+
         var templateObj = getParam(parsedContent);
+        templateObj = getFile(templateObj);
         templateObj = strReplace(templateObj);
         templateObj = listJoin(templateObj);
 
-        console.log(templateObj);
-
-        const nodesAndLinks = nodeMap(templateObj,                                            // Construct a node map based on the parsed content.
+        const nodesAndLinks = nodeMap(templateObj,                                      // Construct a node map based on the parsed content.
             file.name);
 
         drawNodes(nodesAndLinks, templateObj.description);
-    };
-    reader.readAsText(file, "UTF-8");                                                   // Read the file as text using UTF-8 encoding.
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    }
 }
-const fileInput = document.getElementById("file-input");
-fileInput.addEventListener("change", handleFileSelect, false);
 
 /**
  * Parses through the data extracting information like: nodes, links, and the title.
@@ -73,13 +121,18 @@ function nodeMap(parsedContent, name) {
 
     let title = name || "No name found.";
 
+    const svg = document.querySelector('svg');
+    const tooltip = document.querySelector('.tooltip');
+    if (svg) { svg.remove(); }
+    if (tooltip) { tooltip.remove(); }
+
     function createNode(resourceName, resource, count = 0) {
         const name = resourceName;
         const type = resource.type.split("::")[2];
         const data = resource.properties;
         const node = { name, type, data };
         amounts[type] = (amounts[type] || 0) + 1;
-    
+
         switch (type) {                                                                 // Handle different node types.
             case 'SecurityGroup':
             case 'SoftwareConfig':
@@ -153,6 +206,8 @@ function nodeMap(parsedContent, name) {
         }
     }
 
+    console.log(nodes);
+
     if (sgNodes) {
         for (const sgNode of sgNodes) {
             createSGNode(sgNode, nodes, links, amounts);
@@ -166,9 +221,9 @@ function nodeMap(parsedContent, name) {
 * Takes in a an object of nodes, links, and titles.
 * Generates a node map using d3 v7 and html.
 * @param {object} nodesAndLinks - The { nodes, links, amounts, title, and parameters }
+* @param {string} description - The Node Map's description pulled from the YAML/JSON
 */
 function drawNodes(nodesAndLinks, description) {
-
     const nodes = nodesAndLinks.nodes;                                                  // Separates the nodes from the input
     const links = nodesAndLinks.links;                                                  // Separates the links from the input
     const amounts = nodesAndLinks.amounts                                               // Separates the amounts from the input
@@ -557,7 +612,7 @@ function drawNodes(nodesAndLinks, description) {
 
     function zoomed(event) {                                                        // Define the zoomed function to account for space changing
         const { transform } = event;
-    
+
         subnetGroups.attr('transform', transform);
         linksGroup.attr('transform', transform);
         nodesGroup.attr('transform', transform);

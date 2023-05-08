@@ -12,10 +12,10 @@
 
 <body>
     <div class="file-input-container">
+        <span class="file-input-desc">Place your JSON or YAML here:</span>
         <label for="file-input" class="file-input-label">Select File</label>
-        <input type="file" id="file-input" class="file-input">
-        <span class="file-input-desc">Place your JSON or YAML file here to generate an interactive network
-            topology.</span>
+        <input type="file" id="file-input" class="file-input" style="display:none;">
+        <textarea id="text-input" class="text-input" style="display:block;"></textarea>
     </div>
     <div class="buttons">
         <button id="locked" class="button">Lock Nodes</button>

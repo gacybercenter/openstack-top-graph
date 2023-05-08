@@ -21,10 +21,16 @@ body {
     border-radius: 5px;
     cursor: pointer;
     margin-right: 10px;
+    margin-left: 10px;
 }
 
 .file-input {
     display: none;
+}
+
+.text-input {
+    margin-left: 10px;
+    margin-right: 10px;
 }
 
 .buttons {
