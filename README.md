@@ -11,25 +11,28 @@ The webpage uses [D3.js](https://d3js.org/) version 7 and [Cloudflare's](https:/
 
 ### Quick Start:
 1. Navigate to https://topology.gacyberrange.org
-2. Click on the "Select File" button
+2. Click on the "Select File" button or the text box
 3. Upload your JAML or JSON heat template
 
 It should look something like this:
 ![Alt text](./examples/topology.png)
 
 ### Features:
-1. Force Simulation
-2. Dragging and Dropping
-3. Panning
-4. Zooming
-5. Device Tooltips
-6. Legend and Title
+
+1. JAML and JSON Parsing
+2. Force Simulation
+3. Dragging and Dropping
+4. Panning
+5. Zooming
+6. Device Tooltips
 7. Toggleable Options Buttons
 
 ### Options Buttons:
 1. Lock Nodes - Locks each node in place (they still can be dragged)
 2. Show Subnets - Draws a polygon hull around Subnets and their dependencies
 3. Show IPs - Replaces all the node names with the node IPs if applicable
+4. Show Params - Lists the heat temlate description and parameters
+5. Hide Legend - Hides the device type legend
 
 ## Contributing
 

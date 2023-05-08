@@ -50,7 +50,8 @@ function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
                 currentKey !== 'get_param' &&
                 currentKey !== 'user_data_format' &&
                 currentKey !== 'list_join' &&
-                currentKey !== 'config'
+                currentKey !== 'config' &&
+                currentKey !== 'user_data'
             ) {
                 html += formatObject(value,                                         // Call formatObject recursively on each currentKey entry
                     currentKey,

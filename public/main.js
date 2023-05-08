@@ -286,7 +286,7 @@ function drawNodes(nodesAndLinks, description) {
 
     const weights = {                                                                   // Assign each node type a weight
         'Root': 10,
-        'Net': 12,
+        'Net': 10,
         'Subnet': 16,
         'Router': 14,
         'RouterInterface': 7,
@@ -301,7 +301,7 @@ function drawNodes(nodesAndLinks, description) {
         'WaitConditionHandle': 10,
         'MultipartMime': 10,
         'SoftwareConfig': 5,
-        'RandomString': 7,
+        'RandomString': 5,
         'RecordSet': 5,
         'Zone': 7,
         'Other': 8
