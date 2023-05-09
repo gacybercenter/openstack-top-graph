@@ -73,19 +73,18 @@ function handleFileSelect(event) {
  */
 function handleTextSelect(event) {
     try {
+        const inputText = event.target.value;
+        if (!inputText) {
+            return;
+        }
+
+        let parsedContent = jsyaml.safeLoad(inputText) || JSON.parse(inputText);
+
         const parent = document.querySelector('svg');
         if (parent) {
             while (parent.firstChild) {
                 parent.removeChild(parent.firstChild);
             }
-        }
-
-        const inputText = event.target.value;
-        let parsedContent;
-        try {
-            parsedContent = jsyaml.safeLoad(inputText);
-        } catch {
-            parsedContent = JSON.parse(inputText);
         }
 
         const file = { name: "TEMPLATE" }
@@ -238,6 +237,8 @@ function drawNodes(nodesAndLinks, description) {
         node.info = formatObject(node.data);                                            // Adds each node's data to itself as html
         node.ip = IpFromHtml(node.info);                                                // Adds each node's IP address from the html
     }
+
+    console.log(node.info);
 
     const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];                 // Recores the unique node types in an array
     const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a',   // Defines GCC and AU colors
@@ -397,7 +398,13 @@ function drawNodes(nodesAndLinks, description) {
         .attr('fill', d => colorScale(d.type))
         .on('mouseenter', (event, d) => {
             const tooltip = d3.select('.tooltip');
-            tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info}`);
+            if (tooltips) {
+                tooltip.style('max-width', width / 4 + 'px'),
+                tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info.long}`);
+            } else {
+                tooltip.style('max-width', width / 5 + 'px');
+                tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info.short}`);
+            }
             tooltip.style('visibility', 'visible');
         })
         .on('mousemove', (event) => {
@@ -446,7 +453,6 @@ function drawNodes(nodesAndLinks, description) {
         .style('font-size', '14px')
         .style('pointer-events', 'none')
         .style('line-height', '1.4')
-        .style('max-width', width / 5 + 'px')
         .style('text-align', 'left')
         .style('word-wrap', 'break-word');
 

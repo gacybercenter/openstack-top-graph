@@ -32,6 +32,8 @@ function formatDataToText(data, indent = 0) {
  */
 function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
     let html = '';
+    let short = '';
+    let long = '';
     if (Array.isArray(obj)) {                                                       // If obj is an array: 
         obj.forEach((value) => {                                                    // Iterate over its elements 
             if (value !== '' && value !== '.') {                                    // Ignore empty and dot values
@@ -45,26 +47,11 @@ function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
     } else if (typeof obj === 'object' && obj !== null) {                           // If obj is an object: 
         for (const [objKey, value] of Object.entries(obj)) {                        // Iterate over its key-value pairs and call formatObject recursively on each value
             const currentKey = objKey === 'get_resource' ? parentKey : objKey;      // parentKey for get_resource objects, otherwise objKey
-            if (                                                                    // Ignore specific keys
-                // currentKey !== 'template' &&
-                currentKey !== 'get_param' &&
-                currentKey !== 'user_data_format' &&
-                currentKey !== 'list_join' &&
-                currentKey !== 'config' &&
-                currentKey !== 'user_data'
-            ) {
-                html += formatObject(value,                                         // Call formatObject recursively on each currentKey entry
-                    currentKey,
-                    indent + 2,
-                    currentKey,
-                    result);
-            } else if (currentKey === 'list_join') {                                // If currentKey is list_join, use parentKey
-                html += formatObject(value,                                         // Call formatObject recursively on each parentKey entry
-                    parentKey,
-                    indent + 2,
-                    parentKey,
-                    result);
-            }
+            html += formatObject(value,                                         // Call formatObject recursively on each currentKey entry
+                currentKey,
+                indent + 2,
+                currentKey,
+                result);
         }
     } else {
         if (key !== '' && key !== undefined) {
@@ -77,13 +64,25 @@ function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
     if (key === '') {                                                               // If key is empty, format the result object as an HTML string
         for (const [resultKey, values] of Object.entries(result)) {
             if (values.length > 1) {                                                // If there are multiple values for a given key: 
-                html += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`; // Display them separated by commas
+                long += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`; // Display them separated by commas
+                if (resultKey !== 'template' &&
+                    resultKey !== 'user_data_format' &&
+                    resultKey !== 'config' &&
+                    resultKey !== 'user_data') {
+                    short += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
+                }
             } else {                                                                // Otherwise, 
-                html += `<strong>${resultKey}: </strong>${values[0]}<br/>`;         // Display the single value
+                long += `<strong>${resultKey}: </strong>${values[0]}<br/>`;         // Display the single value
+                if (resultKey !== 'template' &&
+                    resultKey !== 'user_data_format' &&
+                    resultKey !== 'config' &&
+                    resultKey !== 'user_data') {
+                    short += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
+                }
             }
         }
     }
-    return html;
+    return {short, long};
 }
 /**
  * Parses html and extracts IP address(es).

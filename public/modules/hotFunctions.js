@@ -100,7 +100,6 @@ function listJoin(parsedContent, obj = parsedContent.resources) {
     return parsedContent;
 }
 
-
 export {
     getParam,
     strReplace,

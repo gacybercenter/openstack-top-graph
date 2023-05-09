@@ -23,6 +23,7 @@
         <button id="ips" class="button">Show IPs</button>
         <button id="showInfo" class="button">Show Params</button>
         <button id="hideLegend" class="button">Hide Legend</button>
+        <button id="tooltips" class="button">Tooltips +</button>
     </div>
     <script type="module" src="./main.js"></script>
     <script>
@@ -31,12 +32,14 @@
         const button3 = document.getElementById('ips');
         const button4 = document.getElementById('showInfo');
         const button5 = document.getElementById('hideLegend');
+        const button6 = document.getElementById('tooltips');
 
         let locked = false;
         let subnet = false;
         let ips = false;
         let showInfo = false;
         let hideLegend = false;
+        let tooltips = false;
 
         function updateButtons() {
             button1.classList.toggle('on', locked);
@@ -44,6 +47,7 @@
             button3.classList.toggle('on', ips);
             button4.classList.toggle('on', showInfo);
             button5.classList.toggle('on', hideLegend);
+            button6.classList.toggle('on', tooltips);
         }
 
         button1.addEventListener('click', () => {
@@ -68,6 +72,11 @@
 
         button5.addEventListener('click', () => {
             hideLegend = !hideLegend;
+            updateButtons();
+        });
+
+        button6.addEventListener('click', () => {
+            tooltips = !tooltips;
             updateButtons();
         });
     </script>
