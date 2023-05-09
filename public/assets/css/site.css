@@ -1,17 +1,5 @@
-.input {
-    top: 0px
-}
-
 body {
     background-color: #f5f5f5;
-}
-
-.file-input-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 10px;
-    margin-bottom: 10px;
 }
 
 .file-input-label {
@@ -21,23 +9,17 @@ body {
     border-radius: 5px;
     cursor: pointer;
     margin-right: 10px;
-    margin-left: 10px;
 }
 
 .file-input {
     display: none;
 }
 
-.text-input {
-    margin-left: 10px;
-    margin-right: 10px;
-}
-
 .buttons {
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin-top: 20px;
+    justify-content: flex-start;
+    margin-top: 10px;
     margin-bottom: 10px;
     background: none;
 }
@@ -47,15 +29,15 @@ body {
     color: #000000;
     border: none;
     border-radius: 10px;
-    margin-left: 10px;
-    margin-right: 10px;
-    padding: 5px 20px;
+    margin-left: 5px;
+    margin-right: 5px;
+    padding: 5px 10px;
     cursor: pointer;
 }
 
 .button.on {
-    background-color: #000000;
-    color: #c1d72e;
+    background-color: #dc582a;
+    color: #000000;
 }
 
 .svg {
@@ -68,6 +50,31 @@ body {
 }
 
 .container {
-    width: 85%;
-    height: 85%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.right-column {
+    flex-basis: calc(36.5% - 10px);
+}
+
+.file-input-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    border-radius: 0px;
+    margin-left: 0px;
+    margin-right: 0px;
+    padding: 5px 10px;
+}
+
+.text-input {
+    position: absolute;
+    display: flex;
+    justify-content: flex-start;
+    border-radius: 10px;
+    padding: 5px 10px;
 }

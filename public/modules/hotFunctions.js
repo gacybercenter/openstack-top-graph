@@ -1,6 +1,6 @@
 function getParam(parsedContent, obj = parsedContent.resources, parameters = parsedContent.parameters) {
     for (const [key, value] of Object.entries(obj)) {
-        if (value.get_param) {
+        if (value && value.get_param) {
             const parameterName = value.get_param;
             if (parameters[parameterName] !== undefined) {
                 obj[key] = parameters[parameterName].default;
@@ -20,7 +20,7 @@ function getParam(parsedContent, obj = parsedContent.resources, parameters = par
 
 function strReplace(parsedContent, obj = parsedContent.resources) {
     for (const [key, value] of Object.entries(obj)) {
-        if (value.str_replace) {
+        if (value && value.str_replace) {
             const template = value.str_replace.template;
             const params = value.str_replace.params;
             let replacedTemplate = template;
@@ -46,8 +46,11 @@ function strReplace(parsedContent, obj = parsedContent.resources) {
 }
 
 function getFile(parsedContent, obj = parsedContent.resources) {
+    if (obj === undefined) {
+        return parsedContent;
+    }
     for (const [key, value] of Object.entries(obj)) {
-        if (value.get_file) {
+        if (value && value.get_file) {
             const file = value.get_file;
             fetch(file)
                 .then(res => res.text())
@@ -59,10 +62,10 @@ function getFile(parsedContent, obj = parsedContent.resources) {
                     obj[key] = file;
                 });
         }
-        else if (typeof value === 'object') {
+        else if (value && typeof value === 'object') {
             getFile(parsedContent, value);
         }
-        else if (Array.isArray(value)) {
+        else if (value && Array.isArray(value)) {
             value.forEach((item) => {
                 getFile(parsedContent, item);
             });
@@ -73,7 +76,7 @@ function getFile(parsedContent, obj = parsedContent.resources) {
 
 function listJoin(parsedContent, obj = parsedContent.resources) {
     for (const [key, value] of Object.entries(obj)) {
-        if (value.list_join) {
+        if (value && value.list_join) {
             const delimiter = value.list_join[0];
             const items = value.list_join.slice(1);
             const joined = items

@@ -112,7 +112,7 @@ function handleTextSelect(event) {
  * @returns {object} - The { nodes, links, amounts, title, and parameters }
  */
 function nodeMap(parsedContent, name) {
-    const root = { name: "openstack", type: "Root" };
+    const root = { name: "cloud", type: "Root" };
     const amounts = { Root: 1 };
     const nodes = [root];
     const links = [];
@@ -127,7 +127,7 @@ function nodeMap(parsedContent, name) {
 
     function createNode(resourceName, resource, count = 0) {
         const name = resourceName;
-        const type = resource.type.split("::")[2];
+        const type = resource.type.split("::")[2] || resource.type;
         const data = resource.properties;
         const node = { name, type, data };
         amounts[type] = (amounts[type] || 0) + 1;
@@ -235,13 +235,13 @@ function drawNodes(nodesAndLinks, description) {
     const parameters = formatDataToText(nodesAndLinks.parameters);                      // Separates the heat template information from the input
     for (var node of nodes) {
         node.info = formatObject(node.data);                                            // Adds each node's data to itself as html
-        node.ip = IpFromHtml(node.info);                                                // Adds each node's IP address from the html
+        node.ip = IpFromHtml(node.info.long);                                                // Adds each node's IP address from the html
     }
 
     console.log(node.info);
 
     const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];                 // Recores the unique node types in an array
-    const colors = ['#000000', '#c1d72e', '#9a9b9d', '#50787f', '#636467', '#dc582a',   // Defines GCC and AU colors
+    const colors = ['#c1d72e', '#000000', '#9a9b9d', '#50787f', '#636467', '#dc582a',   // Defines GCC and AU colors
         '#003359 ', '#A5ACAF', '#3CB6CE', '#00AEEF', '#64A0C8', '#44D62C']
 
     const legendData = uniqueNodeTypes.map((type, i) => ({                              // Assign a GCC and AU color and count to legend data
@@ -338,7 +338,7 @@ function drawNodes(nodesAndLinks, description) {
         .join('path')
         .attr('class', 'perimeter-path')
         .attr('fill', d => colorScale(d.type))
-        .attr('fill-opacity', 0.2)
+        .attr('fill-opacity', 0.25)
 
     function drawPerimeter(subnetNode, depth = 3, paddingAngle = 20) {                  // Draw a hull encompassing Subnet nodes and their connections
         const linkedNodes = getLinkedNodes(subnetNode, depth);                          // Recusivly finds all nodes linked to the subnet
@@ -382,13 +382,30 @@ function drawNodes(nodesAndLinks, description) {
         }
     }
 
+    const titleMaxWidth = width / 1.5;                                             // Set limits on the title width
+
+    const top = svg.append('text')                                                  // Define the title
+        .text(title)
+        .attr('x', width / 2)
+        .attr('y', 30)
+        .attr('fill', 'black')
+        .attr('text-anchor', 'middle')
+        .style('font-family', "Verdana, Helvetica, Sans-Serif")
+        .style('font-size', 32)
+        .attr('textLength', function () {
+            const length = this.getComputedTextLength();
+            return length > titleMaxWidth ? titleMaxWidth : length;
+        })
+        .attr('lengthAdjust', 'spacingAndGlyphs')
+        .attr('title', title);
+
     const linksGroup = svg.append('g')                                              // Define the links between nodes 
         .selectAll('line')
         .data(links)
         .join('line')
         .attr('stroke-width', 2)
         .attr('stroke', d => colorScale(d.source.type))
-        .attr("stroke-opacity", 0.75);
+        .attr("stroke-opacity", 0.9);
 
     const nodesGroup = svg.append('g')                                              // Define the nodes with color, tooltips, and drag properties
         .selectAll('circle')
@@ -399,7 +416,7 @@ function drawNodes(nodesAndLinks, description) {
         .on('mouseenter', (event, d) => {
             const tooltip = d3.select('.tooltip');
             if (tooltips) {
-                tooltip.style('max-width', width / 4 + 'px'),
+                tooltip.style('max-width', width / 3 + 'px'),
                 tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info.long}`);
             } else {
                 tooltip.style('max-width', width / 5 + 'px');
@@ -456,23 +473,6 @@ function drawNodes(nodesAndLinks, description) {
         .style('text-align', 'left')
         .style('word-wrap', 'break-word');
 
-    const titleMaxWidth = width / 1.5;                                             // Set limits on the title width
-
-    const top = svg.append('text')                                                  // Define the title
-        .text(title)
-        .attr('x', width / 2)
-        .attr('y', 30)
-        .attr('fill', 'black')
-        .attr('text-anchor', 'middle')
-        .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', 32)
-        .attr('textLength', function () {
-            const length = this.getComputedTextLength();
-            return length > titleMaxWidth ? titleMaxWidth : length;
-        })
-        .attr('lengthAdjust', 'spacingAndGlyphs')
-        .attr('title', title);
-
     const legend = svg.append("g")                                                  // Define the legend
         .attr("class", "legend")
         .attr("transform", "translate(10, 10)")
@@ -498,39 +498,38 @@ function drawNodes(nodesAndLinks, description) {
         .style("font-size", "16px")
         .style("fill", "#333");
 
-    const descriptionMaxWidth = width / 4;
+    const descriptionMaxWidth = width / 3;
+    const textLines = parameters.split("\n");
 
     const info = svg.append("g") // create a new group element
         .attr("class", "info")
-        .attr("transform", "translate(" + (width * 3 / 4 - 20) + ", 30)");
+        .attr("transform", "translate(" + (width * 2/3 - 20) + ", 10)");
+
+    info.append("rect") // add a rectangle for the background
+        .attr("x", -5)
+        .attr("y", 0)
+        .attr("width", descriptionMaxWidth + 20)
+        .attr("height", textLines.length * 16 + 30) // adjust the height based on the number of lines
+        .style("fill", "#ccc")
+        .style("stroke", "#333")
+        .style("stroke-width", "1px");
 
     info.append("text")
         .text(description)
-        .style("font-size", "16px")
-        .style("fill", "#333")
-        .style("text-decoration", "underline")
+        .attr("x", 5)
+        .attr("y", 20)
         .attr("textLength", function () {
             const length = this.getComputedTextLength();
             return length > descriptionMaxWidth ? descriptionMaxWidth : length;
         })
         .attr("lengthAdjust", "spacingAndGlyphs")
-        .append("title")
-        .text(description);
-
-    const textLines = parameters.split("\n");
-
-    info.append("rect") // add a rectangle for the background
-        .attr("x", 0)
-        .attr("y", 10)
-        .attr("width", descriptionMaxWidth)
-        .attr("height", textLines.length * 16 + 30) // adjust the height based on the number of lines
-        .style("fill", "#fff")
-        .style("stroke", "#333")
-        .style("stroke-width", "1px")
+        .style("font-size", "12px")
+        .style("fill", "#333")
+        .style("text-decoration", "underline");
 
     const text = info.append("text") // add the text content
-        .attr("x", 10)
-        .attr("y", 20)
+        .attr("x", 5)
+        .attr("y", 30)
         .style("font-size", "12px")
         .style("line-height", "1.2")
         .style("text-align", "left");
@@ -540,8 +539,8 @@ function drawNodes(nodesAndLinks, description) {
         .enter()
         .append("tspan")
         .text((d) => d)
-        .attr("x", 10)
-        .attr("dy", "1.4em"); // adjust the line spacing    
+        .attr("x", 5)
+        .attr("dy", "1.4em")
 
     var was_locked = false;
     function toggleLock() {                                                         // Lockes the nodes in place if toggled
@@ -613,6 +612,19 @@ function drawNodes(nodesAndLinks, description) {
             legend.style('visibility', 'hidden');
         } else {
             legend.style('visibility', 'visible');
+        }
+
+        if (darkMode) {
+            top.style('fill', '#fff');
+            
+            textGroup.style('fill', '#eee');
+            legend.selectAll("text")
+                .style('fill', '#ccc');
+        } else {
+            top.style('fill', '#000');
+            textGroup.style('fill', '#111');
+            legend.selectAll("text")
+                .style('fill', '#333');
         }
     }
 
