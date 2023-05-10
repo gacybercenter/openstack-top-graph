@@ -1,6 +1,4 @@
-# OpenStack Topology Graph
-
-[Topology Graph](https://topology.gacyberrange.org)
+# OpenStack Topology Graph 
 
 This project provides a web app GUI for generating a topological graph of Heat Orchestration Templates.
 It can be used to dynamically manage associated network maps and provide an interactive topology.
@@ -10,29 +8,41 @@ The webpage uses [D3.js](https://d3js.org/) version 7 and [Cloudflare's](https:/
 ## Usage
 
 ### Quick Start:
-1. Navigate to https://topology.gacyberrange.org
+1. Navigate to https://topology.gacyberrange.org<br>
+   _Or host the index.html file locally_
 2. Click on the "Select File" button or the text box
-3. Upload your JAML or JSON heat template
+3. Upload your YAML or JSON heat template
 
 It should look something like this:
-![Alt text](./examples/topology.png)
+![Alt text](./examples/topology_file.png)
+Or this:
+![Alt text](./examples/topology_text.png)
 
 ### Features:
 
-1. JAML and JSON Parsing
+1. YAML and JSON Parsing
 2. Force Simulation
-3. Dragging and Dropping
+3. Dragging
 4. Panning
 5. Zooming
 6. Device Tooltips
-7. Toggleable Options Buttons
+7. Toggleable Options
 
 ### Options Buttons:
-1. Lock Nodes - Locks each node in place (they still can be dragged)
-2. Show Subnets - Draws a polygon hull around Subnets and their dependencies
-3. Show IPs - Replaces all the node names with the node IPs if applicable
-4. Show Params - Lists the heat temlate description and parameters
-5. Hide Legend - Hides the device type legend
+- **Lock Nodes**<br>
+   _Locks each node in place (they still can be dragged)_
+- **Show Subnets**<br>
+   _Draws a polygon hull around Subnets and their dependencies_
+- **Show IPs**<br>
+   _Replaces all the node names with the node IPs if applicable_
+- **Show Params**<br>
+   _Lists the heat temlate description and parameters_
+- **Hide Legend**<br>
+   _Hides the device type legend_
+- **Tooltips +**<br>
+   _Shows hidden tooltip information_
+- **Darkmode**<br>
+   _Makes the background darker and text lighter_
 
 ## Contributing
 
@@ -60,5 +70,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-
