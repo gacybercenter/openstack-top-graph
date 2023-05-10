@@ -12,7 +12,7 @@ import {
 } from "./modules/nodeFunctions.js";
 
 import {
-    createSGNode
+    createDuplicateNodes
 } from "./modules/parseFunctions.js";
 
 import {
@@ -33,6 +33,11 @@ textInput.addEventListener("change", handleTextSelect, false);
  */
 function handleFileSelect(event) {
     try {
+        const svg = document.querySelector('svg');                                          // Remove any old node maps
+        const tooltip = document.querySelector('.tooltip');
+        if (svg) { svg.remove(); }
+        if (tooltip) { tooltip.remove(); }
+
         const file = event.target.files[0];                                                 // Get the selected file.
         const isYaml = file.name.endsWith(".yaml")                                          // Check if the file is in YAML or JSON format.
             || file.name.endsWith(".yml");
@@ -46,10 +51,13 @@ function handleFileSelect(event) {
                 ? jsyaml.load(fileContent)
                 : JSON.parse(fileContent);
 
-            const name = file.name.split('.')[0];
-            parsedContent.parameters['OS::stack_name'] = { type: 'string', default: name };
+            const name = file.name.split('.')[0];                                           // Get the template name.
 
-            var templateObj = getParam(parsedContent);
+            if (parsedContent.parameters) {                                                 // Resolve the OS::stack_name
+                parsedContent.parameters['OS::stack_name'] = { type: 'string', default: name };
+            }
+
+            var templateObj = getParam(parsedContent);                                      // Resolve intrinsic hot functions.
             templateObj = getFile(templateObj);
             templateObj = strReplace(templateObj);
             templateObj = listJoin(templateObj);
@@ -57,7 +65,7 @@ function handleFileSelect(event) {
             const nodesAndLinks = nodeMap(templateObj,                                      // Construct a node map based on the parsed content.
                 name);
 
-            drawNodes(nodesAndLinks, templateObj.description);
+            drawNodes(nodesAndLinks, templateObj.description);                              // Construct the force diagram
         };
         reader.readAsText(file, "UTF-8");                                                   // Read the file as text using UTF-8 encoding.
     } catch (error) {
@@ -73,24 +81,25 @@ function handleFileSelect(event) {
  */
 function handleTextSelect(event) {
     try {
+        const svg = document.querySelector('svg');                                      // Remove any old node maps
+        const tooltip = document.querySelector('.tooltip');
+        if (svg) { svg.remove(); }
+        if (tooltip) { tooltip.remove(); }
+
         const inputText = event.target.value;
         if (!inputText) {
             return;
         }
 
-        let parsedContent = jsyaml.safeLoad(inputText) || JSON.parse(inputText);
+        let parsedContent = jsyaml.safeLoad(inputText) || JSON.parse(inputText);        // Parse YAML or JSON.
 
-        const parent = document.querySelector('svg');
-        if (parent) {
-            while (parent.firstChild) {
-                parent.removeChild(parent.firstChild);
-            }
+        const file = { name: "TEMPLATE" };
+
+        if (parsedContent.parameters) {                                                 // Resolve the OS::stack_name
+            parsedContent.parameters['OS::stack_name'] = { type: 'string', default: file.name };
         }
 
-        const file = { name: "TEMPLATE" }
-        parsedContent.parameters['OS::stack_name'] = { type: 'string', default: file.name };
-
-        var templateObj = getParam(parsedContent);
+        var templateObj = getParam(parsedContent);                                      // Resolve intrinsic hot functions.
         templateObj = getFile(templateObj);
         templateObj = strReplace(templateObj);
         templateObj = listJoin(templateObj);
@@ -98,7 +107,7 @@ function handleTextSelect(event) {
         const nodesAndLinks = nodeMap(templateObj,                                      // Construct a node map based on the parsed content.
             file.name);
 
-        drawNodes(nodesAndLinks, templateObj.description);
+        drawNodes(nodesAndLinks, templateObj.description);                              // Construct the force diagram
     } catch (error) {
         alert(`Error: ${error.message}`);
     }
@@ -112,18 +121,13 @@ function handleTextSelect(event) {
  * @returns {object} - The { nodes, links, amounts, title, and parameters }
  */
 function nodeMap(parsedContent, name) {
-    const root = { name: "cloud", type: "Root" };
+    const root = { name: "cloud", type: "Root" };                                       // Initialize the data structures.
     const amounts = { Root: 1 };
     const nodes = [root];
     const links = [];
-    const sgNodes = [];
+    const duplicateNodes = [];
 
     let title = name || "No name found.";
-
-    const svg = document.querySelector('svg');
-    const tooltip = document.querySelector('.tooltip');
-    if (svg) { svg.remove(); }
-    if (tooltip) { tooltip.remove(); }
 
     function createNode(resourceName, resource, count = 0) {
         const name = resourceName;
@@ -135,7 +139,8 @@ function nodeMap(parsedContent, name) {
         switch (type) {                                                                 // Handle different node types.
             case 'SecurityGroup':
             case 'SoftwareConfig':
-                sgNodes.push(node);
+            case 'RandomString':
+                duplicateNodes.push(node);
                 break;
             case 'ResourceGroup':
                 for (const [property_name, property] of Object.entries(data)) {        // Find the `count` property and set `count` to its value.
@@ -167,15 +172,11 @@ function nodeMap(parsedContent, name) {
     }
 
     function createLink(property, parentResourceName) {
-        if (Array.isArray(property)) {
-            for (const element of property) {
-                createLink(element, parentResourceName);
-            }
-        } else if (typeof property === 'object') {
+        if (typeof property === 'object') {
             if (property.get_resource !== undefined || property.port !== undefined) {
                 const target = nodes.find(n => n.name === parentResourceName);
                 const sourceName = property.get_resource || property.port;
-                const source = sgNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
+                const source = duplicateNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
                 if (source && target) {
                     if (target.type === 'RouterInterface' && source.type === 'Subnet') {
                         target.data['fixed_ip'] = source.data['gateway_ip'];
@@ -187,6 +188,10 @@ function nodeMap(parsedContent, name) {
             }
             for (const [key, value] of Object.entries(property)) {
                 createLink(value, parentResourceName);
+            }
+        } else if (Array.isArray(property)) {
+            for (const element of property) {
+                createLink(element, parentResourceName);
             }
         }
     }
@@ -205,11 +210,9 @@ function nodeMap(parsedContent, name) {
         }
     }
 
-    console.log(nodes);
-
-    if (sgNodes) {
-        for (const sgNode of sgNodes) {
-            createSGNode(sgNode, nodes, links, amounts);
+    if (duplicateNodes) {
+        for (const duplicateNode of duplicateNodes) {
+            createDuplicateNodes(duplicateNode, nodes, links, amounts);
         }
     }
 
@@ -227,7 +230,7 @@ function drawNodes(nodesAndLinks, description) {
     const links = nodesAndLinks.links;                                                  // Separates the links from the input
     const amounts = nodesAndLinks.amounts                                               // Separates the amounts from the input
 
-    const title = nodesAndLinks.title;                                             // Separates the title from the input
+    const title = nodesAndLinks.title;                                                  // Separates the title from the input
 
     const width = window.innerWidth                                                     // Stores the window width
     const height = window.innerHeight                                                   // Stores the window height
@@ -237,8 +240,6 @@ function drawNodes(nodesAndLinks, description) {
         node.info = formatObject(node.data);                                            // Adds each node's data to itself as html
         node.ip = IpFromHtml(node.info.long);                                                // Adds each node's IP address from the html
     }
-
-    console.log(node.info);
 
     const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];                 // Recores the unique node types in an array
     const colors = ['#c1d72e', '#000000', '#9a9b9d', '#50787f', '#636467', '#dc582a',   // Defines GCC and AU colors
@@ -287,24 +288,24 @@ function drawNodes(nodesAndLinks, description) {
 
     const weights = {                                                                   // Assign each node type a weight
         'Root': 10,
-        'Net': 10,
-        'Subnet': 16,
-        'Router': 14,
-        'RouterInterface': 7,
+        'Net': 8,
+        'Subnet': 12,
+        'Router': 10,
+        'RouterInterface': 6,
         'Server': 10,
         'Port': 7,
-        'FloatingIP': 8,
-        'FloatingIPAssociation': 6,
+        'FloatingIP': 5,
+        'FloatingIPAssociation': 5,
         'ResourceGroup': 10,
-        'SecurityGroup': 6,
+        'SecurityGroup': 5,
         'ExtraRoute': 7,
-        'WaitCondition': 6,
+        'WaitCondition': 5,
         'WaitConditionHandle': 10,
-        'MultipartMime': 10,
+        'MultipartMime': 8,
         'SoftwareConfig': 5,
         'RandomString': 5,
         'RecordSet': 5,
-        'Zone': 7,
+        'Zone': 8,
         'Other': 8
     };
 
@@ -338,7 +339,7 @@ function drawNodes(nodesAndLinks, description) {
         .join('path')
         .attr('class', 'perimeter-path')
         .attr('fill', d => colorScale(d.type))
-        .attr('fill-opacity', 0.5)
+        .attr('fill-opacity', 0.33)
 
     function drawPerimeter(subnetNode, depth = 3, paddingAngle = 20) {                  // Draw a hull encompassing Subnet nodes and their connections
         const linkedNodes = getLinkedNodes(subnetNode, depth);                          // Recusivly finds all nodes linked to the subnet
@@ -436,9 +437,9 @@ function drawNodes(nodesAndLinks, description) {
         .text(d => d.name)
         .attr('fill', 'black')
         .attr('text-anchor', 'middle')
-        .attr('dy', d => weights[d.type] * 4 || weights.Other * 4)
+        .attr('dy', d => weights[d.type] * 3.5 || weights.Other * 3.5)
         .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', d => weights[d.type] * 1.25 || weights.Other * 1.25)
+        .style('font-size', d => weights[d.type] * 1.1 || weights.Other * 1.1)
         .style('pointer-events', 'none');
 
     const tooltip = d3.select('body')                                               // Define the tooltips
@@ -465,8 +466,8 @@ function drawNodes(nodesAndLinks, description) {
         .data(legendData)
         .enter()
         .append("rect")
-        .attr("x", 10)
-        .attr("y", (d, i) => i * 30 + 60) // Adjusted y-coordinate to make room for the title
+        .attr("x", 0)
+        .attr("y", (d, i) => i * 30 + 35)                                           // Adjusted y-coordinate to make room for the title
         .attr("width", 20)
         .attr("height", 20)
         .attr("fill", d => d.color);
@@ -475,20 +476,20 @@ function drawNodes(nodesAndLinks, description) {
         .data(legendData)
         .enter()
         .append("text")
-        .attr("x", 40)
-        .attr("y", (d, i) => i * 30 + 75) // Adjusted y-coordinate to make room for the title
+        .attr("x", 30)
+        .attr("y", (d, i) => i * 30 + 55)                                           // Adjusted y-coordinate to make room for the title
         .text(d => `${d.type} (${d.count})`)
         .style("font-size", "16px")
-        .style("fill", "#333");
+        .style("fill", "#222");
 
-    const titleMaxWidth = width / 4;                                             // Set limits on the title width
+    const titleMaxWidth = width / 4;                                                // Set limits on the title width
 
-    legend.append('text')                                                  // Define the title
+    legend.append('text')                                                           // Define the title
         .text(title)
         .attr('fill', 'black')
         .attr('text-anchor', 'left')
         .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', 32)
+        .style('font-size', "24px")
         .attr('textLength', function () {
             const length = this.getComputedTextLength();
             return length > titleMaxWidth ? titleMaxWidth : length;
@@ -496,25 +497,25 @@ function drawNodes(nodesAndLinks, description) {
         .attr('lengthAdjust', 'spacingAndGlyphs')
         .attr('title', title)
         .attr('x', 0)
-        .attr('y', 40);  // Modified line to adjust y-coordinate of the title
+        .attr('y', 20);                                                         // Modified line to adjust y-coordinate of the title
 
     const descriptionMaxWidth = width / 3;
     const textLines = parameters.split("\n");
 
-    const info = svg.append("g") // create a new group element
+    const info = svg.append("g")                                                // Create a new group element
         .attr("class", "info")
-        .attr("transform", "translate(" + (width * 2 / 3 - 20) + ", 10)");
+        .attr("transform", "translate(" + (width * (1 - 0.36)) + ", 5)")
 
-    info.append("rect") // add a rectangle for the background
+    info.append("rect")                                                         // Add a rectangle for the background
         .attr("x", -5)
         .attr("y", 0)
         .attr("width", descriptionMaxWidth + 20)
-        .attr("height", textLines.length * 16 + 30) // adjust the height based on the number of lines
-        .style("fill", "#ccc")
-        .style("stroke", "#333")
+        .attr("height", textLines.length * 16 + 30)                             // Adjust the height based on the number of lines
+        .style("fill", "#ddd")
+        .style("stroke", "#222")
         .style("stroke-width", "1px");
 
-    info.append("text")
+    info.append("text")                                                         // Add the description
         .text(description)
         .attr("x", 5)
         .attr("y", 20)
@@ -524,10 +525,10 @@ function drawNodes(nodesAndLinks, description) {
         })
         .attr("lengthAdjust", "spacingAndGlyphs")
         .style("font-size", "12px")
-        .style("fill", "#333")
+        .style("fill", "#222")
         .style("text-decoration", "underline");
 
-    const text = info.append("text") // add the text content
+    const text = info.append("text")                                            // Add the text content
         .attr("x", 5)
         .attr("y", 30)
         .style("font-size", "12px")
@@ -543,7 +544,7 @@ function drawNodes(nodesAndLinks, description) {
         .attr("dy", "1.4em")
 
     var was_locked = false;
-    function toggleLock() {                                                         // Lockes the nodes in place if toggled
+    function toggleLock() {                                                     // Lockes the nodes in place if toggled
         nodesGroup.each(function (d) {
             d.locked = !d.locked;
             if (d.locked) {
@@ -602,29 +603,26 @@ function drawNodes(nodesAndLinks, description) {
             }
         }
 
-        if (showInfo) {
+        if (showInfo) {                                                             // Updates the Show Info state
             info.style('visibility', 'visible');
         } else {
             info.style('visibility', 'hidden');
         }
 
-        if (hideLegend) {
+        if (hideLegend) {                                                           // Updates the Hide Legend state
             legend.style('visibility', 'hidden');
         } else {
             legend.style('visibility', 'visible');
         }
 
-        if (darkMode) {
-            top.style('fill', '#fff');
-
+        if (darkMode) {                                                             // Updates the Dark Mode state
             textGroup.style('fill', '#eee');
             legend.selectAll("text")
-                .style('fill', '#ccc');
+                .style('fill', '#ddd');
         } else {
-            top.style('fill', '#000');
             textGroup.style('fill', '#111');
             legend.selectAll("text")
-                .style('fill', '#333');
+                .style('fill', '#222');
         }
     }
 
