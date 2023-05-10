@@ -338,7 +338,7 @@ function drawNodes(nodesAndLinks, description) {
         .join('path')
         .attr('class', 'perimeter-path')
         .attr('fill', d => colorScale(d.type))
-        .attr('fill-opacity', 0.25)
+        .attr('fill-opacity', 0.5)
 
     function drawPerimeter(subnetNode, depth = 3, paddingAngle = 20) {                  // Draw a hull encompassing Subnet nodes and their connections
         const linkedNodes = getLinkedNodes(subnetNode, depth);                          // Recusivly finds all nodes linked to the subnet
@@ -382,23 +382,6 @@ function drawNodes(nodesAndLinks, description) {
         }
     }
 
-    const titleMaxWidth = width / 1.5;                                             // Set limits on the title width
-
-    const top = svg.append('text')                                                  // Define the title
-        .text(title)
-        .attr('x', width / 2)
-        .attr('y', 30)
-        .attr('fill', 'black')
-        .attr('text-anchor', 'middle')
-        .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', 32)
-        .attr('textLength', function () {
-            const length = this.getComputedTextLength();
-            return length > titleMaxWidth ? titleMaxWidth : length;
-        })
-        .attr('lengthAdjust', 'spacingAndGlyphs')
-        .attr('title', title);
-
     const linksGroup = svg.append('g')                                              // Define the links between nodes 
         .selectAll('line')
         .data(links)
@@ -417,7 +400,7 @@ function drawNodes(nodesAndLinks, description) {
             const tooltip = d3.select('.tooltip');
             if (tooltips) {
                 tooltip.style('max-width', width / 3 + 'px'),
-                tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info.long}`);
+                    tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info.long}`);
             } else {
                 tooltip.style('max-width', width / 5 + 'px');
                 tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info.short}`);
@@ -483,7 +466,7 @@ function drawNodes(nodesAndLinks, description) {
         .enter()
         .append("rect")
         .attr("x", 10)
-        .attr("y", (d, i) => i * 30 + 0)
+        .attr("y", (d, i) => i * 30 + 60) // Adjusted y-coordinate to make room for the title
         .attr("width", 20)
         .attr("height", 20)
         .attr("fill", d => d.color);
@@ -493,17 +476,34 @@ function drawNodes(nodesAndLinks, description) {
         .enter()
         .append("text")
         .attr("x", 40)
-        .attr("y", (d, i) => i * 30 + 15)
+        .attr("y", (d, i) => i * 30 + 75) // Adjusted y-coordinate to make room for the title
         .text(d => `${d.type} (${d.count})`)
         .style("font-size", "16px")
         .style("fill", "#333");
+
+    const titleMaxWidth = width / 4;                                             // Set limits on the title width
+
+    legend.append('text')                                                  // Define the title
+        .text(title)
+        .attr('fill', 'black')
+        .attr('text-anchor', 'left')
+        .style('font-family', "Verdana, Helvetica, Sans-Serif")
+        .style('font-size', 32)
+        .attr('textLength', function () {
+            const length = this.getComputedTextLength();
+            return length > titleMaxWidth ? titleMaxWidth : length;
+        })
+        .attr('lengthAdjust', 'spacingAndGlyphs')
+        .attr('title', title)
+        .attr('x', 0)
+        .attr('y', 40);  // Modified line to adjust y-coordinate of the title
 
     const descriptionMaxWidth = width / 3;
     const textLines = parameters.split("\n");
 
     const info = svg.append("g") // create a new group element
         .attr("class", "info")
-        .attr("transform", "translate(" + (width * 2/3 - 20) + ", 10)");
+        .attr("transform", "translate(" + (width * 2 / 3 - 20) + ", 10)");
 
     info.append("rect") // add a rectangle for the background
         .attr("x", -5)
@@ -616,7 +616,7 @@ function drawNodes(nodesAndLinks, description) {
 
         if (darkMode) {
             top.style('fill', '#fff');
-            
+
             textGroup.style('fill', '#eee');
             legend.selectAll("text")
                 .style('fill', '#ccc');

@@ -56,7 +56,7 @@ body {
 }
 
 .right-column {
-    flex-basis: calc(36.5% - 10px);
+    flex-basis: calc(36%);
 }
 
 .file-input-container {
