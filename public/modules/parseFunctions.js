@@ -1,4 +1,5 @@
 function createDuplicateNodes(duplicateNode, nodes, links, amounts) {
+    
     const targetNodes = links.filter(l => l.source.name === duplicateNode.name)             // Get the duplicate target nodes
         .map(l => l.target);
     const sourceNodes = links.filter(l => l.target.name === duplicateNode.name)             // Get the duplicate source nodes

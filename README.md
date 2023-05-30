@@ -1,12 +1,33 @@
-# OpenStack Topology Graph 
+# OpenStack Topology Graph v1.0
 
 This project provides a web app GUI for generating a topological graph of Heat Orchestration Templates.
 It can be used to dynamically manage associated network maps and provide an interactive topology.
 It recursively extracts the input data and formats it into a D3.js force simulation.
 
-The webpage uses [D3.js](https://d3js.org/) version 7 and [Cloudflare's](https://cdnjs.cloudflare.com/) JSON and YAML parsing library version 3.14.1.
-## Usage
+The webpage uses [D3.js](https://d3js.org/) version 7 and [Cloudflare](https://cdnjs.cloudflare.com/)'s JSON and YAML parsing library version 3.14.1.
 
+### Disclaimer:
+_Still under development. There are some bugs._
+### Supported resource types:
+- Net
+- Subnet
+- Router
+- RouterInterface
+- Server
+- Port
+- FloatingIP
+- ResourceGroup
+- SecurityGroup
+- ExtraRoute
+- WaitCondition
+- WaitConditionHandle
+- MultipartMime
+- SoftwareConfig
+- RandomString
+- RecordSet
+- Zone
+
+## Usage
 ### Quick Start:
 1. Navigate to https://topology.gacyberrange.org<br>
    _Or host the index.html file locally_
@@ -30,7 +51,7 @@ Or this:
 
 ### Options Buttons:
 - **Lock Nodes**<br>
-   _Locks each node in place (they still can be dragged)_
+   _Locks each node in place (they can still be dragged)_
 - **Show Subnets**<br>
    _Draws a polygon hull around Subnets and their dependencies_
 - **Show IPs**<br>

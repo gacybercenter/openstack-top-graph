@@ -55,17 +55,32 @@ function handleFileSelect(event) {
 
             if (parsedContent.parameters) {                                                 // Resolve the OS::stack_name
                 parsedContent.parameters['OS::stack_name'] = { type: 'string', default: name };
-            }
+
+                if (parsedContent.parameters.console_host) {
+                    const url = parsedContent.parameters.console_host;
+    
+                    const consoleHostLink = document.querySelector('#console_host_link');
+                    consoleHostLink.href = url;
+    
+                    const consoleHostButton = document.querySelector('#console_host_button');
+                    consoleHostButton.style.display = 'block';
+    
+                    delete parsedContent.parameters.console_host;
+                }   
+            }         
 
             var templateObj = getParam(parsedContent);                                      // Resolve intrinsic hot functions.
             templateObj = getFile(templateObj);
             templateObj = strReplace(templateObj);
             templateObj = listJoin(templateObj);
 
+            console.log(templateObj);
+
             const nodesAndLinks = nodeMap(templateObj,                                      // Construct a node map based on the parsed content.
                 name);
 
             drawNodes(nodesAndLinks, templateObj.description);                              // Construct the force diagram
+
         };
         reader.readAsText(file, "UTF-8");                                                   // Read the file as text using UTF-8 encoding.
     } catch (error) {
@@ -99,10 +114,22 @@ function handleTextSelect(event) {
             parsedContent.parameters['OS::stack_name'] = { type: 'string', default: file.name };
         }
 
+        if (parsedContent.parameters.console_host) {                                                 // Resolve the OS::stack_name
+            const url = parsedContent.parameters.console_host;
+
+            const consoleHostButton = document.querySelector('console_host_button');
+            consoleHostButton.setAttribute('display', 'visible');
+
+            const consoleHostLink = document.querySelector('console_host_link');
+            consoleHostLink.setAttribute('href', url);
+        }
+
         var templateObj = getParam(parsedContent);                                      // Resolve intrinsic hot functions.
         templateObj = getFile(templateObj);
         templateObj = strReplace(templateObj);
         templateObj = listJoin(templateObj);
+
+        console.log(templateObj);
 
         const nodesAndLinks = nodeMap(templateObj,                                      // Construct a node map based on the parsed content.
             file.name);
@@ -171,7 +198,7 @@ function nodeMap(parsedContent, name) {
         }
     }
 
-    function createLink(property, parentResourceName) {
+    function getResource(property, parentResourceName) {
         if (typeof property === 'object') {
             if (property.get_resource !== undefined || property.port !== undefined) {
                 const target = nodes.find(n => n.name === parentResourceName);
@@ -187,11 +214,11 @@ function nodeMap(parsedContent, name) {
                 }
             }
             for (const [key, value] of Object.entries(property)) {
-                createLink(value, parentResourceName);
+                getResource(value, parentResourceName);
             }
         } else if (Array.isArray(property)) {
             for (const element of property) {
-                createLink(element, parentResourceName);
+                getResource(element, parentResourceName);
             }
         }
     }
@@ -205,7 +232,7 @@ function nodeMap(parsedContent, name) {
     for (const node of nodes) {
         if (node.data) {
             for (const [propertyName, property] of Object.entries(node.data)) {
-                createLink(property, node.name);
+                getResource(property, node.name);
             }
         }
     }
@@ -459,7 +486,7 @@ function drawNodes(nodesAndLinks, description) {
 
     const legend = svg.append("g")                                                  // Define the legend
         .attr("class", "legend")
-        .attr("transform", "translate(10, 10)")
+        .attr("transform", "translate(10, 45)")
         .style('visibility', 'visible');
 
     legend.selectAll("rect")                                                        // Add colors to the legend
@@ -467,7 +494,7 @@ function drawNodes(nodesAndLinks, description) {
         .enter()
         .append("rect")
         .attr("x", 0)
-        .attr("y", (d, i) => i * 30 + 35)                                           // Adjusted y-coordinate to make room for the title
+        .attr("y", (d, i) => i * 30 + 50)                                           // Adjusted y-coordinate to make room for the title
         .attr("width", 20)
         .attr("height", 20)
         .attr("fill", d => d.color);
@@ -477,7 +504,7 @@ function drawNodes(nodesAndLinks, description) {
         .enter()
         .append("text")
         .attr("x", 30)
-        .attr("y", (d, i) => i * 30 + 55)                                           // Adjusted y-coordinate to make room for the title
+        .attr("y", (d, i) => i * 30 + 65)                                           // Adjusted y-coordinate to make room for the title
         .text(d => `${d.type} (${d.count})`)
         .style("font-size", "16px")
         .style("fill", "#222");
@@ -497,7 +524,7 @@ function drawNodes(nodesAndLinks, description) {
         .attr('lengthAdjust', 'spacingAndGlyphs')
         .attr('title', title)
         .attr('x', 0)
-        .attr('y', 20);                                                         // Modified line to adjust y-coordinate of the title
+        .attr('y', 30);                                                         // Modified line to adjust y-coordinate of the title
 
     const descriptionMaxWidth = width / 3;
     const textLines = parameters.split("\n");
