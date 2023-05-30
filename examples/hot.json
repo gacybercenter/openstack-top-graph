@@ -1,0 +1,118 @@
+{
+    "heat_template_version": "2019-10-01T00:00:00.000Z",
+    "description": "Example Cyber Range template showcasing the various resource types that are supported",
+    "parameters": {
+        "username": {
+            "type": "string",
+            "default": "kali"
+        },
+        "password": {
+            "type": "string",
+            "default": "password123"
+        },
+        "count": {
+            "type": "string",
+            "default": 5
+        }
+    },
+    "resources": {
+        "router": {
+            "type": "OS::Neutron::Router",
+            "properties": {
+                "name": "router",
+                "external_gateway_info": {
+                    "network": "public"
+                }
+            }
+        },
+        "routerInterface": {
+            "type": "OS::Neutron::RouterInterface",
+            "properties": {
+                "router_id": {
+                    "get_resource": "router"
+                },
+                "subnet_id": {
+                    "get_resource": "subnet"
+                }
+            }
+        },
+        "network": {
+            "type": "OS::Neutron::Net",
+            "properties": {
+                "name": "example-network"
+            }
+        },
+        "subnet": {
+            "type": "OS::Neutron::Subnet",
+            "properties": {
+                "name": "example-subnet",
+                "network_id": {
+                    "get_resource": "network"
+                },
+                "cidr": "192.168.0.0/24"
+            }
+        },
+        "Resource_Group": {
+            "type": "OS::Heat::ResourceGroup",
+            "properties": {
+                "count": {
+                    "get_param": "count"
+                },
+                "resource_def": {
+                    "type": "OS::Nova::Server",
+                    "properties": {
+                        "name": "example-server",
+                        "image": "cirros",
+                        "flavor": "m1.tiny",
+                        "networks": [
+                            {
+                                "network": {
+                                    "get_resource": "network"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        "server": {
+            "type": "OS::Nova::Server",
+            "properties": {
+                "name": "example-server",
+                "image": "cirros",
+                "flavor": "m1.tiny",
+                "networks": [
+                    {
+                        "port": {
+                            "get_resource": "port"
+                        }
+                    }
+                ]
+            }
+        },
+        "port": {
+            "type": "OS::Neutron::Port",
+            "properties": {
+                "name": "example-port",
+                "network_id": {
+                    "get_resource": "network"
+                },
+                "fixed_ips": [
+                    {
+                        "subnet_id": {
+                            "get_resource": "subnet"
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "outputs": {
+        "root_password": {
+            "description": "Password Output",
+            "value": {
+                "get_param": "password"
+            }
+        }
+    }
+}
