@@ -60,7 +60,7 @@ function handleFileSelect(event) {
                     const url = parsedContent.parameters.console_host;
     
                     const consoleHostLink = document.querySelector('#console_host_link');
-                    consoleHostLink.href = url;
+                    consoleHostLink.url = url;
     
                     const consoleHostButton = document.querySelector('#console_host_button');
                     consoleHostButton.style.display = 'block';
@@ -74,10 +74,7 @@ function handleFileSelect(event) {
             templateObj = strReplace(templateObj);
             templateObj = listJoin(templateObj);
 
-            console.log(templateObj);
-
-            const nodesAndLinks = nodeMap(templateObj,                                      // Construct a node map based on the parsed content.
-                name);
+            const nodesAndLinks = nodeMap(templateObj, name);                               // Construct a node map based on the parsed content.
 
             drawNodes(nodesAndLinks, templateObj.description);                              // Construct the force diagram
 
@@ -261,6 +258,8 @@ function drawNodes(nodesAndLinks, description) {
 
     const width = window.innerWidth                                                     // Stores the window width
     const height = window.innerHeight                                                   // Stores the window height
+    var container = document.getElementsByClassName('container')[0];
+    var heightOffset = container.offsetHeight;
 
     const parameters = formatDataToText(nodesAndLinks.parameters);                      // Separates the heat template information from the input
     for (var node of nodes) {
@@ -346,13 +345,13 @@ function drawNodes(nodesAndLinks, description) {
         .on("tick", update);
 
     const zoom = d3.zoom()                                                              // Define the zoom function
-        .scaleExtent([0.25, 4])
+        .scaleExtent([0.2, 5])
         .on('zoom', zoomed);
 
     const svg = d3.select('body')                                                       // Define the main svg body for the topology
         .append('svg')
-        .attr('width', width)
-        .attr('height', height)
+        .attr('width', width * 0.975)
+        .attr('height', (height - heightOffset) * 0.94)
         .attr("cursor", "crosshair")
         .call(zoom);
 
@@ -537,7 +536,7 @@ function drawNodes(nodesAndLinks, description) {
         .attr("x", -5)
         .attr("y", 0)
         .attr("width", descriptionMaxWidth + 20)
-        .attr("height", textLines.length * 16 + 30)                             // Adjust the height based on the number of lines
+        .attr("height", textLines.length * 16 + 50)                             // Adjust the height based on the number of lines
         .style("fill", "#ddd")
         .style("stroke", "#222")
         .style("stroke-width", "1px");
@@ -587,7 +586,12 @@ function drawNodes(nodesAndLinks, description) {
         }
     }
 
+    var iframe = document.getElementById("console_host_iframe");
+
     function update() {                                                             // Run by the force simulation every tick
+        svg.attr('width', (window.innerWidth) * 0.975)
+            .attr('height', (window.innerHeight - heightOffset) * 0.945);
+
         nodesGroup.attr('cx', d => d.x)                                             // Updates the node positions
             .attr('cy', d => d.y);
 

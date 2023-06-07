@@ -11,6 +11,7 @@
 </head>
 
 <body>
+    <iframe id="console_host_iframe" class="iframe" style="display: none;"></iframe>
     <div class="container">
         <div class="buttons">
             <button id="locked" class="button">Lock Nodes</button>
@@ -29,12 +30,11 @@
             <div class="text-input">
                 <textarea id="text-input" class="text-input" spellcheck="false"></textarea>
             </div>
+            <a id="console_host_link" url="#" onclick="toggleNewWindow()">
+                <button id="console_host_button" class="console-host">Toggle Range</button>
+            </a>
         </div>
     </div>
-
-    <a id="console_host_link" href="#" target="_blank">
-        <button id="console_host_button" class="console-host">Launch Range</button>
-    </a>
 
     <script type="module" src="./main.js"></script>
     <script>
@@ -53,6 +53,16 @@
         let hideLegend = false;
         let tooltips = false;
         let darkMode = false;
+        let isOpen = false;
+
+        var consoleHost = document.getElementById('console_host_button');
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+
+        var iframe = document.getElementById("console_host_iframe");
+        iframe.contentEditable = "true";
+        iframe.sandbox = "allow-scripts allow-forms allow-pointer-lock allow-popups allow-same-origin";
+        iframe.allow = "autoplay; fullscreen; accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; magnetometer; microphone; midi; payment; vr";
 
         function updateButtons() {
             button1.classList.toggle('on', locked);
@@ -104,6 +114,20 @@
             darkMode = !darkMode;
             updateButtons();
         });
+
+        function toggleNewWindow() {
+            if (isOpen) {
+                iframe.style.display = "none";
+                consoleHost.style.backgroundColor = "#c1d72e";
+                isOpen = false;
+            } else {
+                iframe.src = document.getElementById("console_host_link").url;
+                iframe.style.display = "block";
+                iframe.focus();
+                consoleHost.style.backgroundColor = "#dc582a";
+                isOpen = true;
+            }
+        }
     </script>
 </body>
 
