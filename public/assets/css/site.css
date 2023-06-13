@@ -79,12 +79,26 @@ body {
     padding: 5px 10px;
 }
 
+.generator {
+    background-color: #c1d72e;
+    color: #000000;
+    border: none;
+    border-radius: 0px;
+    margin-left: 5px;
+    margin-right: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    bottom: 10px;
+    left: 10px;
+    position: absolute;
+}
+
 .console-host {
     display: none;
     background-color: #c1d72e;
     color: #000000;
     border: none;
-    border-radius: 10px;
+    border-radius: 0px;
     margin-left: 5px;
     margin-right: 5px;
     padding: 5px 10px;
