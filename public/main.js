@@ -1,22 +1,20 @@
 import {
-    getParam,
-    strReplace,
-    getFile,
-    listJoin
-} from "./modules/hotFunctions.js";
-
-import {
+    replaceIndex,    
     formatDataToText,
     formatObject,
     IpFromHtml
-} from "./modules/nodeFunctions.js";
-
-import {
-    createDuplicateNodes
 } from "./modules/parseFunctions.js";
 
 import {
-    replaceIndex
+    clearSVG,
+    getFileType,
+    parseFile,
+    getTemplateName,
+    resolveIntrinsicFunctions,
+    parseInputText,
+    setTemplateName,
+    setConsoleHost,
+    createDuplicateNodes
 } from "./modules/utilityFunctions.js";
 
 const fileInput = document.getElementById("file-input");
@@ -33,58 +31,43 @@ textInput.addEventListener("change", handleTextSelect, false);
  */
 function handleFileSelect(event) {
     try {
-        const svg = document.querySelector('svg');                                          // Remove any old node maps
-        const tooltip = document.querySelector('.tooltip');
-        if (svg) { svg.remove(); }
-        if (tooltip) { tooltip.remove(); }
+        clearSVG();
 
-        const file = event.target.files[0];                                                 // Get the selected file.
-        const isYaml = file.name.endsWith(".yaml")                                          // Check if the file is in YAML or JSON format.
-            || file.name.endsWith(".yml");
-        const fileType = isYaml ? "yaml" : "json";
+        const file = event.target.files[0];
+        const fileType = getFileType(file.name);
 
-        const reader = new FileReader();                                                    // Create a new FileReader object to read the contents of the file.
+        const reader = new FileReader();
+        reader.onload = handleFileLoad(fileType, file.name, reader);
 
-        reader.onload = function (event) {                                                  // Set up a callback function to handle the file load event.
-            const fileContent = event.target.result;                                        // Get the file contents from the FileReader object.
-            const parsedContent = fileType === "yaml"                                       // Parse the file contents based on the file type.
-                ? jsyaml.load(fileContent)
-                : JSON.parse(fileContent);
-
-            const name = file.name.split('.')[0];                                           // Get the template name.
-
-            if (parsedContent.parameters) {                                                 // Resolve the OS::stack_name
-                parsedContent.parameters['OS::stack_name'] = { type: 'string', default: name };
-
-                if (parsedContent.parameters.console_host) {
-                    const url = parsedContent.parameters.console_host;
-    
-                    const consoleHostLink = document.querySelector('#console_host_link');
-                    consoleHostLink.href = url;
-    
-                    const consoleHostButton = document.querySelector('#console_host_button');
-                    consoleHostButton.style.display = 'block';
-    
-                    delete parsedContent.parameters.console_host;
-                }   
-            }         
-
-            var templateObj = getParam(parsedContent);                                      // Resolve intrinsic hot functions.
-            templateObj = getFile(templateObj);
-            templateObj = strReplace(templateObj);
-            templateObj = listJoin(templateObj);
-
-            console.log(templateObj);
-
-            const nodesAndLinks = nodeMap(templateObj,                                      // Construct a node map based on the parsed content.
-                name);
-
-            drawNodes(nodesAndLinks, templateObj.description);                              // Construct the force diagram
-
-        };
-        reader.readAsText(file, "UTF-8");                                                   // Read the file as text using UTF-8 encoding.
+        reader.readAsText(file, "UTF-8");
     } catch (error) {
         alert(`Error: ${error.message}`);
+    }
+}
+
+/**
+ * Returns a function that handles a file load event by parsing the file content,
+ * setting the console host, resolving intrinsic functions, mapping nodes and links,
+ * and drawing these nodes and links.
+ *
+ * @param {string} fileType - the type of the loaded file.
+ * @param {string} fileName - the name of the loaded file.
+ * @param {FileReader} reader - the FileReader object used to read the file.
+ * @return {function} a function that handles a file load event.
+ */
+function handleFileLoad(fileType, fileName, reader) {
+    return function (event) {
+        const fileContent = event.target.result;
+        const parsedContent = parseFile(fileType, fileContent);
+        const templateName = getTemplateName(fileName);
+
+        setConsoleHost(parsedContent.parameters);
+        setTemplateName(parsedContent, templateName);
+
+        const templateObj = resolveIntrinsicFunctions(parsedContent);
+        const nodesAndLinks = nodeMap(templateObj, templateName);
+
+        drawNodes(nodesAndLinks, templateObj.description);
     }
 }
 
@@ -96,45 +79,27 @@ function handleFileSelect(event) {
  */
 function handleTextSelect(event) {
     try {
-        const svg = document.querySelector('svg');                                      // Remove any old node maps
-        const tooltip = document.querySelector('.tooltip');
-        if (svg) { svg.remove(); }
-        if (tooltip) { tooltip.remove(); }
+        clearSVG();
 
         const inputText = event.target.value;
-        if (!inputText) {
-            return;
+        if (!inputText) return;
+
+        const parsedContent = parseInputText(inputText);
+
+        const file = { name: 'TEMPLATE' };
+        if (parsedContent.parameters) {
+            parsedContent.parameters['OS::stack_name'] = {
+                type: 'string',
+                default: file.name,
+            };
         }
 
-        let parsedContent = jsyaml.safeLoad(inputText) || JSON.parse(inputText);        // Parse YAML or JSON.
+        setConsoleHost(parsedContent.parameters);
 
-        const file = { name: "TEMPLATE" };
+        const templateObj = resolveIntrinsicFunctions(parsedContent);
+        const nodesAndLinks = nodeMap(templateObj, file.name);
 
-        if (parsedContent.parameters) {                                                 // Resolve the OS::stack_name
-            parsedContent.parameters['OS::stack_name'] = { type: 'string', default: file.name };
-        }
-
-        if (parsedContent.parameters.console_host) {                                                 // Resolve the OS::stack_name
-            const url = parsedContent.parameters.console_host;
-
-            const consoleHostButton = document.querySelector('console_host_button');
-            consoleHostButton.setAttribute('display', 'visible');
-
-            const consoleHostLink = document.querySelector('console_host_link');
-            consoleHostLink.setAttribute('href', url);
-        }
-
-        var templateObj = getParam(parsedContent);                                      // Resolve intrinsic hot functions.
-        templateObj = getFile(templateObj);
-        templateObj = strReplace(templateObj);
-        templateObj = listJoin(templateObj);
-
-        console.log(templateObj);
-
-        const nodesAndLinks = nodeMap(templateObj,                                      // Construct a node map based on the parsed content.
-            file.name);
-
-        drawNodes(nodesAndLinks, templateObj.description);                              // Construct the force diagram
+        drawNodes(nodesAndLinks, templateObj.description);
     } catch (error) {
         alert(`Error: ${error.message}`);
     }
@@ -156,6 +121,16 @@ function nodeMap(parsedContent, name) {
 
     let title = name || "No name found.";
 
+    /**
+     * Creates a node object based on the given resource and resource name, 
+     * and adds it to the appropriate list of nodes. The function also handles 
+     * special cases for certain node types and adds links if the node is a 
+     * Router. 
+     *
+     * @param {string} resourceName - The name of the resource to be created.
+     * @param {object} resource - The resource object containing data for the new node.
+     * @param {number} [count=0] - The number of nodes to create if the resource is a ResourceGroup.
+     */
     function createNode(resourceName, resource, count = 0) {
         const name = resourceName;
         const type = resource.type.split("::")[2] || resource.type;
@@ -198,6 +173,14 @@ function nodeMap(parsedContent, name) {
         }
     }
 
+    /**
+     * Given a property and a parent resource name, this function searches for a
+     * resource that matches the given property and links it to the parent resource.
+     *
+     * @param {object | array} property - The property to search for.
+     * @param {string} parentResourceName - The name of the parent resource to link
+     * the property to.
+     */
     function getResource(property, parentResourceName) {
         if (typeof property === 'object') {
             if (property.get_resource !== undefined || property.port !== undefined) {
@@ -261,6 +244,8 @@ function drawNodes(nodesAndLinks, description) {
 
     const width = window.innerWidth                                                     // Stores the window width
     const height = window.innerHeight                                                   // Stores the window height
+    var container = document.getElementsByClassName('container')[0];
+    var heightOffset = container.offsetHeight;
 
     const parameters = formatDataToText(nodesAndLinks.parameters);                      // Separates the heat template information from the input
     for (var node of nodes) {
@@ -346,13 +331,13 @@ function drawNodes(nodesAndLinks, description) {
         .on("tick", update);
 
     const zoom = d3.zoom()                                                              // Define the zoom function
-        .scaleExtent([0.25, 4])
+        .scaleExtent([0.2, 5])
         .on('zoom', zoomed);
 
     const svg = d3.select('body')                                                       // Define the main svg body for the topology
         .append('svg')
-        .attr('width', width)
-        .attr('height', height)
+        .attr('width', width * 0.975)
+        .attr('height', (height - heightOffset) * 0.94)
         .attr("cursor", "crosshair")
         .call(zoom);
 
@@ -537,7 +522,7 @@ function drawNodes(nodesAndLinks, description) {
         .attr("x", -5)
         .attr("y", 0)
         .attr("width", descriptionMaxWidth + 20)
-        .attr("height", textLines.length * 16 + 30)                             // Adjust the height based on the number of lines
+        .attr("height", textLines.length * 16 + 50)                             // Adjust the height based on the number of lines
         .style("fill", "#ddd")
         .style("stroke", "#222")
         .style("stroke-width", "1px");
@@ -571,6 +556,13 @@ function drawNodes(nodesAndLinks, description) {
         .attr("dy", "1.4em")
 
     var was_locked = false;
+
+    /**
+     * Toggles the locked state of the nodes and updates their position accordingly. 
+     *
+     * @param none
+     * @return none
+     */
     function toggleLock() {                                                     // Lockes the nodes in place if toggled
         nodesGroup.each(function (d) {
             d.locked = !d.locked;
@@ -587,7 +579,19 @@ function drawNodes(nodesAndLinks, description) {
         }
     }
 
+    /**
+     * Updates the positions of nodes, images, text, and links based on the current tick
+     * of the force simulation. Also updates the visibility of various UI elements based
+     * on different states such as Show IPs, Lock Nodes, Show Subnets, Show Info, Hide Legend,
+     * and Dark Mode.
+     *
+     * @param None
+     * @return None
+     */
     function update() {                                                             // Run by the force simulation every tick
+        svg.attr('width', (window.innerWidth) * 0.975)
+            .attr('height', (window.innerHeight - heightOffset) * 0.945);
+
         nodesGroup.attr('cx', d => d.x)                                             // Updates the node positions
             .attr('cy', d => d.y);
 
@@ -653,6 +657,11 @@ function drawNodes(nodesAndLinks, description) {
         }
     }
 
+    /**
+     * Defines the zoomed function to account for space changing.
+     *
+     * @param {object} event - The event object.
+     */
     function zoomed(event) {                                                        // Define the zoomed function to account for space changing
         const { transform } = event;
 
@@ -663,9 +672,21 @@ function drawNodes(nodesAndLinks, description) {
         textGroup.attr('transform', transform);
     }
 
+    /**
+     * Manages the drag actions, called by nodes.
+     *
+     * @param {Object} simulation - the simulation object to be used for the drag actions.
+     * @return {Object} - the drag object that chooses the drag phase.
+     */
     function drag(simulation) {                                                     // Manages the drag actions, called by nodes
         let x, y, dx, dy;
 
+        /**
+         * Manages the beginning of a drag.
+         *
+         * @param {event} event - the event object representing the drag start
+         * @return {undefined} this function does not return anything
+         */
         function dragstarted(event) {                                               // Manages the begining of a drag
             if (!event.active) simulation.alphaTarget(0.3).restart();
 
@@ -676,6 +697,12 @@ function drawNodes(nodesAndLinks, description) {
             event.subject.fy = y;
         }
 
+        /**
+         * Manages the middle of a drag
+         *
+         * @param {event} event - the event object
+         * @return {void} does not return anything
+         */
         function dragged(event) {                                                   // Manages the middle of a drag
 
             const transform = d3.zoomTransform(svg.node());
@@ -690,6 +717,12 @@ function drawNodes(nodesAndLinks, description) {
             tooltip.style("visibility", "hidden");
         }
 
+        /**
+         * Manages the end of a drag
+         *
+         * @param {Object} event - the event object
+         * @return {undefined}
+         */
         function dragended(event) {                                                 // Manages the end of a drag
             if (!event.active) simulation.alphaTarget(0);
 
