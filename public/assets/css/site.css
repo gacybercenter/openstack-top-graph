@@ -16,7 +16,6 @@ body {
 }
 
 .buttons {
-    display: flex;
     align-items: center;
     justify-content: flex-start;
     margin-top: 10px;
@@ -37,16 +36,13 @@ body {
 
 .button.on {
     background-color: #dc582a;
-    color: #000000;
 }
 
 .svg {
-    width: 100%;
-    height: 100%;
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 0;
+    z-index: 1;
 }
 
 .container {
@@ -106,4 +102,20 @@ body {
     bottom: 10px;
     right: 10px;
     position: absolute;
+    z-index: 3;
+}
+
+iframe {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border: none;
+    z-index: 2;
+}
+
+.generation {
+    display: none;
 }

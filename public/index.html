@@ -11,7 +11,7 @@
 </head>
 
 <body>
-    <div class="container">
+    <div class="container" id="interface1">
         <div class="buttons">
             <button id="locked" class="button">Lock Nodes</button>
             <button id="subnet" class="button">Show Subnets</button>
@@ -30,15 +30,21 @@
                 <textarea id="text-input" class="text-input" spellcheck="false"></textarea>
             </div>
         </div>
+        <iframe id="console_host_iframe" class="iframe" style="display: none;"></iframe>
+        <a id="console_host_link" url="#" onclick="toggleNewWindow()">
+            <button id="console_host_button" class="console-host">Toggle Range</button>
+        </a>
     </div>
 
-    <a id="generator_link" href="#" target="_blank">
-        <button id="generator_button" class="generator">YAML Generator</button>
-    </a>
+    <button id="generator_button" class="generator" onclick="toggleInterface()">YAML Generator</button>
 
-    <a id="console_host_link" href="#" target="_blank">
-        <button id="console_host_button" class="console-host">Launch Range</button>
-    </a>
+    <div class="generation" id="interface2">
+        <div class="right-column">
+            <div class="text-input">
+                <textarea id="text-input" class="text-input" spellcheck="false"></textarea>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="./main.js"></script>
     <script>
@@ -57,6 +63,21 @@
         let hideLegend = false;
         let tooltips = false;
         let darkMode = false;
+        let isOpen = false;
+        let generator = false;
+
+        var consoleHost = document.getElementById('console_host_button');
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+
+        var iframe = document.getElementById("console_host_iframe");
+        iframe.contentEditable = "true";
+        iframe.sandbox = "allow-scripts allow-forms allow-pointer-lock allow-popups allow-same-origin";
+        iframe.allow = "autoplay; fullscreen; accelerometer; camera; encrypted-media; geolocation; gyroscope; magnetometer; microphone; midi; payment";
+
+        var generator_button = document.getElementById('generator_button');
+        var interface1 = document.getElementById("interface1");
+        var interface2 = document.getElementById("interface2");
 
         function updateButtons() {
             button1.classList.toggle('on', locked);
@@ -108,6 +129,34 @@
             darkMode = !darkMode;
             updateButtons();
         });
+
+        function toggleNewWindow() {
+            if (isOpen) {
+                iframe.style.display = "none";
+                consoleHost.style.backgroundColor = "#c1d72e";
+                isOpen = false;
+            } else {
+                iframe.src = document.getElementById("console_host_link").url;
+                iframe.style.display = "block";
+                iframe.focus();
+                consoleHost.style.backgroundColor = "#dc582a";
+                isOpen = true;
+            }
+        }
+        
+        function toggleInterface() {
+            if (generator) {
+                interface1.style.display = "flex";
+                interface2.style.display = "none";
+                generator_button.style.backgroundColor = "#c1d72e";
+                generator = false;
+            } else {
+                interface1.style.display = "none";
+                interface2.style.display = "flex";
+                generator_button.style.backgroundColor = "#dc582a";
+                generator = true
+            }
+        }
     </script>
 </body>
 
