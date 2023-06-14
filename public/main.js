@@ -1,6 +1,5 @@
 import {
-    replaceIndex,    
-    formatDataToText,
+    replaceIndex,
     formatObject,
     IpFromHtml
 } from "./modules/parseFunctions.js";
@@ -247,33 +246,72 @@ function drawNodes(nodesAndLinks, description) {
     var container = document.getElementsByClassName('container')[0];
     var heightOffset = container.offsetHeight;
 
-    const parameters = formatDataToText(nodesAndLinks.parameters);                      // Separates the heat template information from the input
+    const parameters = nodesAndLinks.parameters;                      // Separates the heat template information from the input
     for (var node of nodes) {
         node.info = formatObject(node.data);                                            // Adds each node's data to itself as html
-        node.ip = IpFromHtml(node.info.long);                                                // Adds each node's IP address from the html
+        node.ip = IpFromHtml(node.info.long);                                           // Adds each node's IP address from the html
     }
 
-    const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];                 // Recores the unique node types in an array
-    const colors = ['#c1d72e', '#000000', '#9a9b9d', '#50787f', '#636467', '#dc582a',   // Defines GCC and AU colors
-        '#003359 ', '#A5ACAF', '#3CB6CE', '#00AEEF', '#64A0C8', '#44D62C']
-
-    const legendData = uniqueNodeTypes.map((type, i) => ({                              // Assign a GCC and AU color and count to legend data
-        type,
-        count: amounts[type],
-        color: colors[i % colors.length]
-    }));
-
-    const colorScale = (function () {                                                   // Assign a GCC and AU color to each node
-        const domain = uniqueNodeTypes;
-        const range = colors;
+    /**
+     * Generates a color scale function that maps node types to colors.
+     *
+     * @param {array} domain - A list of unique node types
+     * @param {array} range - A list of colors to map to each node type
+     * @returns {function} - A color scale function that maps node types to colors
+     */
+    function generateColorScale(domain, range) {
         const scale = {};
         domain.forEach((value, i) => {
-            scale[value] = range[i % colors.length];
+            scale[value] = range[i % range.length];
         });
         return function (type) {
             return scale[type];
         };
-    })();
+    }
+
+    const colors = [
+        '#c1d72e',
+        '#000000',
+        '#9a9b9d',
+        '#50787f',
+        '#636467',
+        '#dc582a',
+        '#003359',
+        '#A5ACAF',
+        '#3CB6CE',
+        '#00AEEF',
+        '#64A0C8',
+        '#44D62C',
+        '#ff0000', // red
+        '#ffa500', // orange
+        '#ffff00', // yellow
+        '#008000', // green
+        '#4b0082', // indigo
+        '#ee82ee', // violet
+    ];
+
+    const uniqueNodeTypes = [...new Set(nodes.map(node => node.type))];
+    const colorScale = generateColorScale(uniqueNodeTypes, colors);
+
+    const legendData = uniqueNodeTypes.map(type => ({
+        type,
+        count: amounts[type],
+        color: colorScale(type)
+    }));
+
+    const subnetColors = [
+        '#ff0000', // red
+        '#ffa500', // orange
+        '#ffff00', // yellow
+        '#008000', // green
+        '#0000ff', // blue
+        '#4b0082', // indigo
+        '#ee82ee', // violet
+        '#00ffff', // cyan
+        '#ff00ff', // magenta
+        '#00ff00', // lime
+        '#000000', // black
+    ];
 
     const pictures = {                                                                  // Assign each node type an icon
         'Root': "./assets/img/favicon.ico",
@@ -336,8 +374,8 @@ function drawNodes(nodesAndLinks, description) {
 
     const svg = d3.select('body')                                                       // Define the main svg body for the topology
         .append('svg')
-        .attr('width', width * 0.975)
-        .attr('height', (height - heightOffset) * 0.94)
+        .attr('width', width * 0.98)
+        .attr('height', (height - heightOffset) * 0.95)
         .attr("cursor", "crosshair")
         .call(zoom);
 
@@ -350,19 +388,26 @@ function drawNodes(nodesAndLinks, description) {
         .data(d => [d])
         .join('path')
         .attr('class', 'perimeter-path')
-        .attr('fill', d => colorScale(d.type))
-        .attr('fill-opacity', 0.33)
+        .attr('fill', d => subnetColors[(d.index + 6) % subnetColors.length])
+        .attr('fill-opacity', 0.25);
 
-    function drawPerimeter(subnetNode, depth = 3, paddingAngle = 20) {                  // Draw a hull encompassing Subnet nodes and their connections
-        const linkedNodes = getLinkedNodes(subnetNode, depth);                          // Recusivly finds all nodes linked to the subnet
-        const perimeterNodes = [subnetNode, ...linkedNodes];                            // Adds all subnet elements to an array
-        const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));      // Constructs the hull based on the perimeter nodes
-        if (!hull) {                                                                    // Creates a null hull if there are no perimeter nodes
+    /**
+     * Draws a perimeter around the given subnet node and its linked nodes up to a given depth.
+     *
+     * @param {object} subnetNode - The node to draw a perimeter around
+     * @param {number} [depth=3] - The depth to search for linked nodes
+     * @param {number} [paddingAngle=20] - The angle in degrees to pad the perimeter by
+     */
+    function drawPerimeter(subnetNode, depth = 3, paddingAngle = 30) {
+        const linkedNodes = getLinkedNodes(subnetNode, depth);
+        const perimeterNodes = [subnetNode, ...linkedNodes];
+        const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));
+        if (!hull) {
             perimeterPaths.filter(d => d === subnetNode).attr("d", "");
             return;
         }
         const centroid = d3.polygonCentroid(hull);
-        const paddedHull = hull.map(point => {                                          // Adds a buffer region using the hull centroid and an angle
+        const paddedHull = hull.map(point => {
             const angle = Math.atan2(point[1] - centroid[1], point[0] - centroid[0]);
             return [
                 point[0] + paddingAngle * Math.cos(angle),
@@ -371,11 +416,12 @@ function drawNodes(nodesAndLinks, description) {
         });
         const expandedHull = paddedHull.map(point => point.join(',')).join(' ');
         perimeterPaths.filter(d => d === subnetNode).attr("d", `M${expandedHull}Z`);
+
         /**
-         * Recursivly finds all nodes with a the input as a source.
-         * @param {string} node - The starting node object
-         * @param {object} depth - The function search depth
-         * @returns {string} - An array containing the connected node objects
+         * Recursively finds all nodes with the input as a source.
+         * @param {object} node - The starting node object
+         * @param {number} depth - The function search depth
+         * @returns {array} - An array containing the connected node objects
          */
         function getLinkedNodes(node, depth) {
             if (depth === 0) return [];
@@ -509,53 +555,61 @@ function drawNodes(nodesAndLinks, description) {
         .attr('lengthAdjust', 'spacingAndGlyphs')
         .attr('title', title)
         .attr('x', 0)
-        .attr('y', 30);                                                         // Modified line to adjust y-coordinate of the title
+        .attr('y', 30);                                                             // Modified line to adjust y-coordinate of the title
 
-    const descriptionMaxWidth = width / 3;
-    const textLines = parameters.split("\n");
+    const descriptionMaxWidth = width / 3;                                       // Set limits on the description width
 
-    const info = svg.append("g")                                                // Create a new group element
+    const info = svg.append("foreignObject")
         .attr("class", "info")
-        .attr("transform", "translate(" + (width * (1 - 0.36)) + ", 5)")
-
-    info.append("rect")                                                         // Add a rectangle for the background
-        .attr("x", -5)
+        .attr("x", width * (1 - 0.4))
         .attr("y", 0)
-        .attr("width", descriptionMaxWidth + 20)
-        .attr("height", textLines.length * 16 + 50)                             // Adjust the height based on the number of lines
-        .style("fill", "#ddd")
-        .style("stroke", "#222")
-        .style("stroke-width", "1px");
+        .attr("width", descriptionMaxWidth + 50)
+        .attr("height", "100%")
+        .style("position", "absolute")
+        .style("overflow-x", "scroll")
+        .style("overflow-y", "scroll");
 
-    info.append("text")                                                         // Add the description
-        .text(description)
-        .attr("x", 5)
-        .attr("y", 20)
-        .attr("textLength", function () {
-            const length = this.getComputedTextLength();
-            return length > descriptionMaxWidth ? descriptionMaxWidth : length;
-        })
-        .attr("lengthAdjust", "spacingAndGlyphs")
-        .style("font-size", "12px")
-        .style("fill", "#222")
-        .style("text-decoration", "underline");
+    const div = info.append("xhtml:div")
+        .style("background-color", "#ddd")
+        .style("height", "100%")
+        .style("width", "100%")
+        .style("padding", "8px")
+        .attr('lengthAdjust', 'spacingAndGlyphs');
 
-    const text = info.append("text")                                            // Add the text content
-        .attr("x", 5)
-        .attr("y", 30)
+    const button = div.append("button")
+        .text("Copy")
+        .style("margin-bottom", "8px")
+        .on("click", () => {
+            const copyText = jsyaml.dump(parameters);
+            navigator.clipboard.writeText(copyText)
+                .then(() => {
+                    console.log("Copied to clipboard: " + copyText);
+                })
+                .catch((err) => {
+                    console.error("Failed to copy text: " + err);
+                })
+        });
+
+    const information = div.append("p")
+        .html(description)
+        .style("font-size", "16px")
+        .style("text-decoration", "underline")
+        .style("hyphens", "auto")
+        .attr('lengthAdjust', 'spacingAndGlyphs');
+
+    const code = div.append("pre")
         .style("font-size", "12px")
         .style("line-height", "1.2")
-        .style("text-align", "left");
+        .style("text-align", "left")
+        .style("hyphens", "auto")
+        .style("background-color", "#f1f1f1")
+        .style("border-radius", "8px")
+        .style("padding", "8px")
+        .attr('lengthAdjust', 'spacingAndGlyphs');
 
-    text.selectAll("tspan")
-        .data(textLines)
-        .enter()
-        .append("tspan")
-        .text((d) => d)
-        .attr("x", 5)
-        .attr("dy", "1.4em")
+    code.html(jsyaml.dump(parameters));
 
-    var was_locked = false;
+    var wasLocked = false;
 
     /**
      * Toggles the locked state of the nodes and updates their position accordingly. 
@@ -580,47 +634,40 @@ function drawNodes(nodesAndLinks, description) {
     }
 
     /**
-     * Updates the positions of nodes, images, text, and links based on the current tick
-     * of the force simulation. Also updates the visibility of various UI elements based
-     * on different states such as Show IPs, Lock Nodes, Show Subnets, Show Info, Hide Legend,
-     * and Dark Mode.
-     *
-     * @param None
-     * @return None
+     * Updates the positions of nodes, images, text, and links based on the current
+     * tick of the force simulation. Also updates the visibility of various UI
+     * elements based on different states such as Show IPs, Lock Nodes, Show Subnets,
+     * Show Info, Hide Legend, and Dark Mode.
      */
-    function update() {                                                             // Run by the force simulation every tick
-        svg.attr('width', (window.innerWidth) * 0.975)
-            .attr('height', (window.innerHeight - heightOffset) * 0.945);
+    function update() {
+        svg.attr("width", (window.innerWidth) * 0.98)
+            .attr("height", (window.innerHeight - heightOffset) * 0.95);
 
-        nodesGroup.attr('cx', d => d.x)                                             // Updates the node positions
-            .attr('cy', d => d.y);
+        nodesGroup
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y);
 
-        imageGroup.attr('x', d => d.x - weights[d.type] * 2                         // Updates the icon positions
-            || d.x - weights.Other * 2)
-            .attr('y', d => d.y - weights[d.type] * 2
-                || d.y - weights.Other * 2);
+        imageGroup
+            .attr("x", d => (d.x - weights[d.type] * 2) || (d.x - weights.Other * 2))
+            .attr("y", d => (d.y - weights[d.type] * 2) || (d.y - weights.Other * 2));
 
-        textGroup.attr('x', d => d.x)                                               // Updates the text positions
-            .attr('y', d => d.y)
-            .text(d => {
-                if (ips) {                                                          // Updates the Show IPs state
-                    return d.ip;
-                } else {
-                    return d.name;
-                }
-            });
+        textGroup
+            .attr("x", d => d.x)
+            .attr("y", d => d.y)
+            .text(d => ips ? d.ip : d.name);
 
-        linksGroup.attr('x1', d => d.source.x)                                      // Updates the link positions
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y);
+        linksGroup
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
 
-        if (was_locked !== locked) {                                                // Updates the Lock Nodes state
+        if (wasLocked !== locked) {
             toggleLock();
-            was_locked = locked;
+            wasLocked = locked;
         }
 
-        if (subnet) {                                                               // Updates the Show Subnets state
+        if (subnet) {
             subnetGroups.each(function (d) {
                 drawPerimeter(d);
             });
@@ -634,27 +681,12 @@ function drawNodes(nodesAndLinks, description) {
             }
         }
 
-        if (showInfo) {                                                             // Updates the Show Info state
-            info.style('visibility', 'visible');
-        } else {
-            info.style('visibility', 'hidden');
-        }
+        info.style("visibility", showInfo ? "visible" : "hidden");
 
-        if (hideLegend) {                                                           // Updates the Hide Legend state
-            legend.style('visibility', 'hidden');
-        } else {
-            legend.style('visibility', 'visible');
-        }
+        legend.style("visibility", hideLegend ? "hidden" : "visible");
 
-        if (darkMode) {                                                             // Updates the Dark Mode state
-            textGroup.style('fill', '#eee');
-            legend.selectAll("text")
-                .style('fill', '#ddd');
-        } else {
-            textGroup.style('fill', '#111');
-            legend.selectAll("text")
-                .style('fill', '#222');
-        }
+        textGroup.style("fill", darkMode ? "#eee" : "#111");
+        legend.selectAll("text").style("fill", darkMode ? "#ddd" : "#222");
     }
 
     /**

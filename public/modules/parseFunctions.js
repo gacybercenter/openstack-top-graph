@@ -22,28 +22,6 @@ function replaceIndex(object, index) {
 }
 
 /**
- * Converts a parsed JSON or YAML object to a text string representation.
- * @param {object} data - The parsed JSON or YAML object to format
- * @param {number} indent - The indentation level, defaults to 0
- * @returns {string} - The text string representation of the object
- */
-function formatDataToText(data, indent = 0) {
-    let text = '';
-    if (Array.isArray(data)) { // If data is an array:
-        data.forEach((value) => { // Iterate over its elements
-            text += ' '.repeat(indent) + '- ' + formatDataToText(value, indent + 2).replace(/\n/g, '\n' + ' '.repeat(indent + 2)) + '\n'; // Call formatDataToText recursively on each element, add an indentation level and a dash for each item, and replace new lines with the appropriate indentation
-        });
-    } else if (typeof data === 'object' && data !== null) { // If data is an object:
-        for (const [key, value] of Object.entries(data)) { // Iterate over its key-value pairs and call formatDataToText recursively on each value
-            text += ' '.repeat(indent) + '- ' + key + ': ' + formatDataToText(value, indent + 2).replace(/\n/g, '\n' + ' '.repeat(indent + 2)) + '\n'; // Add an indentation level, the key and a colon, and display the key-value pair on a new line, replacing new lines with the appropriate indentation
-        }
-    } else { // If data is a primitive type:
-        text += data; // Display it as is
-    }
-    return text;
-}
-
-/**
  * Converts an object to an HTML string representation, recursively.
  * Duplicate values for a given key are separated by commas.
  * @param {object} obj - The object to format
@@ -133,7 +111,6 @@ function IpFromHtml(html) {
 
 export {
     replaceIndex,
-    formatDataToText,
     formatObject,
     IpFromHtml
 };

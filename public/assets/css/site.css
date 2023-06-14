@@ -75,6 +75,57 @@ body {
     padding: 5px 10px;
 }
 
+.info {
+    background-color: #ddd;
+    position: absolute;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.info div {
+    height: 100%;
+    width: 100%;
+    padding: 5px;
+    background-color: #ddd;
+    overflow-y: scroll;
+}
+
+.info button {
+    margin-bottom: 5px;
+}
+
+.info p {
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+.info {
+    background-color: #ddd;
+    position: absolute;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.info div {
+    height: 100%;
+    width: 100%;
+    padding: 5px;
+    background-color: #ddd;
+    overflow-y: scroll;
+}
+
+.info button {
+    margin-bottom: 5px;
+}
+
+.info p {
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
 .generator {
     background-color: #c1d72e;
     color: #000000;
