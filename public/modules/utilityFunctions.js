@@ -86,7 +86,7 @@ function parseInputText(inputText) {
 function setTemplateName(parsedContent, templateName) {
     if (parsedContent.parameters) {
         parsedContent.parameters['OS::stack_name'] = { type: 'string', default: templateName };
-    return parsedContent;
+        return parsedContent;
     }
 }
 
@@ -110,43 +110,47 @@ function setConsoleHost(parameters) {
 }
 
 /**
- * Creates duplicate nodes on the graph by adding new nodes and links.
+ * Duplicates a given node and links it to all of its connected nodes in a graph.
+ * Updates the counts of the types of nodes in the graph.
  *
- * @param {Object} duplicateNode - The node to be duplicated.
+ * @param {Object} node - The node to be duplicated.
  * @param {Array} nodes - The array of nodes in the graph.
  * @param {Array} links - The array of links between nodes in the graph.
- * @param {Object} amounts - An object containing the count of each type of node in the graph.
+ * @param {Object} nodeCounts - An object containing the count of each type of node in the graph.
  */
-function createDuplicateNodes(duplicateNode, nodes, links, amounts) {
-    const targetNodes = links.filter(l => l.source.name === duplicateNode.name).map(l => l.target);
-    const sourceNodes = links.filter(l => l.target.name === duplicateNode.name).map(l => l.source);
+function createDuplicateNodes(node, nodes, links, nodeCounts) {
+    const sourceLinks = links.filter(link => link.source.name === node.name);
+    const targetLinks = links.filter(link => link.target.name === node.name);
+
+    const sourceNodes = sourceLinks.map(link => link.target);
+    const targetNodes = targetLinks.map(link => link.source);
 
     const uniqueSourceNodes = Array.from(new Set(sourceNodes));
     const uniqueTargetNodes = Array.from(new Set(targetNodes));
 
-    uniqueSourceNodes.forEach(linkedNode => {
-        const newNode = { ...duplicateNode };
+    uniqueSourceNodes.forEach(sourceNode => {
+        const newNode = { ...node };
         nodes.push(newNode);
-        links.push({ source: linkedNode, target: newNode });
+        links.push({ source: sourceNode, target: newNode });
     });
 
-    uniqueTargetNodes.forEach(linkedNode => {
-        const newNode = { ...duplicateNode };
+    uniqueTargetNodes.forEach(targetNode => {
+        const newNode = { ...node };
         nodes.push(newNode);
-        links.push({ source: linkedNode, target: newNode });
+        links.push({ source: targetNode, target: newNode });
     });
 
-    const duplicateLinks = links.filter(l => l.source.name === duplicateNode.name);
-    duplicateLinks.forEach(l => {
-        links.splice(links.indexOf(l), 1);
+    const duplicateLinks = sourceLinks;
+    duplicateLinks.forEach(link => {
+        const linkIndex = links.indexOf(link);
+        links.splice(linkIndex, 1);
     });
 
     if (uniqueSourceNodes.length === 1) {
         const sourceType = uniqueSourceNodes[0].type;
-        amounts[sourceType] = (amounts[sourceType] || 0) + 1;
+        nodeCounts[sourceType] = (nodeCounts[sourceType] || 0) + 1;
     }
 }
-
 
 export {
     clearSVG,

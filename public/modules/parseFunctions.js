@@ -1,116 +1,111 @@
 /**
- * Replaces all occurrences of '%index%' in a string or nested object/array with the provided index.
+ * Replaces any occurrence of "%index%" in a string or in an object's string values with the provided index,
+ * recursively replacing values in arrays and objects.
  *
- * @param {*} object - The object/array/string to perform the replacements on.
- * @param {number} index - The index to replace '%index%' with.
- * @return {*} - A new object/array/string with all instances of '%index%' replaced with the provided index.
+ * @param {string|Array|object} obj - The object to replace the index in.
+ * @param {number} index - The index to replace.
+ * @return {string|Array|object} - The object with the updated index.
  */
-function replaceIndex(object, index) {
-    if (typeof object === 'string') {
-        return object.replace('%index%', index);
-    } else if (Array.isArray(object)) {
-        return object.map(item => replaceIndex(item, index));
-    } else if (typeof object === 'object' && object !== null) {
+function replaceIndex(obj, index) {
+    if (typeof obj === 'string') {
+        return obj.replace('%index%', index);
+    } else if (Array.isArray(obj)) {
+        return obj.map(item => replaceIndex(item, index));
+    } else if (typeof obj === 'object' && obj !== null) {
         const newObj = {};
-        for (const [key, value] of Object.entries(object)) {
+        for (const [key, value] of Object.entries(obj)) {
             newObj[key] = replaceIndex(value, index);
         }
         return newObj;
     } else {
-        return object;
+        return obj;
     }
 }
 
 /**
- * Converts an object to an HTML string representation, recursively.
- * Duplicate values for a given key are separated by commas.
- * @param {object} obj - The object to format
- * @param {string} key - The key for the current object, defaults to empty string
- * @param {number} indent - The indentation level, defaults to 0
- * @param {string} parentKey - The key of the parent object, defaults to empty string
- * @param {object} result - The object to store results, defaults to empty object
- * @returns {string} - The HTML string representation of the object
+ * Recursively formats an object into an array of values or an object of arrays.
+ *
+ * @param {object|array} obj - The object or array to be formatted.
+ * @param {string} [key=''] - The key of the current object in the parent object.
+ * @param {number} [indent=0] - The number of spaces to indent the formatted string.
+ * @param {string} [parentKey=''] - The key of the parent object.
+ * @param {object} [result={}] - The resulting object or array.
+ * @return {object} The formatted object or array.
  */
 function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
     let html = '';
-    let short = '';
-    let long = '';
-    if (Array.isArray(obj)) {                                                       // If obj is an array: 
-        obj.forEach((value) => {                                                    // Iterate over its elements 
-            if (value !== '' && value !== '.') {                                    // Ignore empty and dot values
-                html += formatObject(value,                                         // Call formatObject recursively on each element
-                    `${key}`,
-                    indent + 2,
-                    parentKey,
-                    result);
+    if (Array.isArray(obj)) {
+        obj.forEach((value) => {
+            if (value !== '' && value !== '.') {
+                html += formatObject(value, key, indent + 2, parentKey, result);
             }
         });
-    } else if (typeof obj === 'object' && obj !== null) {                           // If obj is an object: 
-        for (const [objKey, value] of Object.entries(obj)) {                        // Iterate over its key-value pairs and call formatObject recursively on each value
-            const currentKey = objKey === 'get_resource' ? parentKey : objKey;      // parentKey for get_resource objects, otherwise objKey
-            html += formatObject(value,                                         // Call formatObject recursively on each currentKey entry
-                currentKey,
-                indent + 2,
-                currentKey,
-                result);
+    } else if (typeof obj === 'object' && obj !== null) {
+        for (const [objKey, value] of Object.entries(obj)) {
+            const currentKey = objKey === 'get_resource' ? parentKey : objKey;
+            html += formatObject(value, currentKey, indent + 2, currentKey, result);
         }
     } else {
-        if (key !== '' && key !== undefined) {
-            if (result[key] === undefined) {                                        // If obj is a primitive type: 
-                result[key] = [];                                                   // Store it in the result object under the given key
-            }
+        if (key && result[key] === undefined) {
+            result[key] = [];
+        }
+        if (key) {
             result[key].push(obj);
         }
     }
-    if (key === '') {                                                               // If key is empty, format the result object as an HTML string
-        for (const [resultKey, values] of Object.entries(result)) {
-            if (values.length > 1) {                                                // If there are multiple values for a given key: 
-                long += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`; // Display them separated by commas
-                if (resultKey !== 'template' &&
-                    resultKey !== 'user_data_format' &&
-                    resultKey !== 'config' &&
-                    resultKey !== 'user_data') {
-                    short += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
-                }
-            } else {                                                                // Otherwise, 
-                long += `<strong>${resultKey}: </strong>${values[0]}<br/>`;         // Display the single value
-                if (resultKey !== 'template' &&
-                    resultKey !== 'user_data_format' &&
-                    resultKey !== 'config' &&
-                    resultKey !== 'user_data') {
-                    short += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
-                }
+    return result;
+}
+
+/**
+ * Formats an object to an HTML string, returning both a short and long version. 
+ *
+ * @param {Object} result - The object to format.
+ * @return {Object} An object with two properties: short and long. Both are HTML strings.
+ */
+function formatObjectToHTML(result) {
+    let short = '';
+    let long = '';
+    for (const [resultKey, values] of Object.entries(result)) {
+        if (values.length > 1) {
+            long += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
+            if (['template', 'user_data_format', 'config', 'user_data'].indexOf(resultKey) === -1) {
+                short += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
+            }
+        } else {
+            long += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
+            if (['template', 'user_data_format', 'config', 'user_data'].indexOf(resultKey) === -1) {
+                short += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
             }
         }
     }
     return { short, long };
 }
+
 /**
- * Parses html and extracts IP address(es).
+ * Parses HTML and extracts IP address(es).
  * It finds: ip_address, fixed_ip, and cidr.
- * @param {object} html - The html to be parsed
- * @returns {string} - The IP address(es) in the html
+ * @param {string} html - The HTML to be parsed.
+ * @returns {string} - The IP address(es) in the HTML.
  */
-function IpFromHtml(html) {
+function HTMLToIp(html) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const strongElements = doc.querySelectorAll('strong');
     let ip = '';
 
-    strongElements.forEach((el) => {                                                // Loops through each html element.
-        if (el.textContent.includes('ip_address')) {                                // Gets the ip_address html entries
-            ip = el.nextSibling.textContent.trim();
-        } else if (el.textContent.includes('fixed_ip')) {                           // Gets the fixed_ip html entries
-            ip = el.nextSibling.textContent.trim();
-        } else if (el.textContent.includes('cidr')) {                               // Gets the cidr html entries
+    for (const el of strongElements) {
+        if (el.textContent.includes('ip_address') ||
+            el.textContent.includes('fixed_ip') ||
+            el.textContent.includes('cidr')) {
             ip = el.nextSibling.textContent.trim();
         }
-    });
+    }
     return ip;
 }
 
 export {
     replaceIndex,
     formatObject,
-    IpFromHtml
+    formatObjectToHTML,
+    HTMLToIp
 };
