@@ -31,19 +31,13 @@
             </div>
         </div>
         <iframe id="console_host_iframe" class="iframe" style="display: none;"></iframe>
+        <iframe id="generator_iframe" class="iframe" style="display: none;"></iframe>
         <a id="console_host_link" url="#" onclick="toggleNewWindow()">
             <button id="console_host_button" class="console-host">Toggle Range</button>
         </a>
-    </div>
-
-    <button id="generator_button" class="generator" onclick="toggleInterface()">YAML Generator</button>
-
-    <div class="generation" id="interface2">
-        <div class="right-column">
-            <div class="text-input">
-                <textarea id="text-input" class="text-input" spellcheck="false"></textarea>
-            </div>
-        </div>
+        <a id="generator_link" onclick="toggleInterface()">
+            <button id="generator_button" class="generator">Toggle Generator</button>
+        </a>
     </div>
 
     <script type="module" src="./main.js"></script>
@@ -63,21 +57,24 @@
         let hideLegend = false;
         let tooltips = false;
         let darkMode = false;
-        let isOpen = false;
-        let generator = false;
+        let consoleOpen = false;
+        let generatorOpen = false;
 
-        var consoleHost = document.getElementById('console_host_button');
         var width = window.innerWidth;
         var height = window.innerHeight;
 
-        var iframe = document.getElementById("console_host_iframe");
-        iframe.contentEditable = "true";
-        iframe.sandbox = "allow-scripts allow-forms allow-pointer-lock allow-popups allow-same-origin";
-        iframe.allow = "autoplay; fullscreen; accelerometer; camera; encrypted-media; geolocation; gyroscope; magnetometer; microphone; midi; payment";
+        var consoleHost = document.getElementById('console_host_button');
+        var consoleIframe = document.getElementById("console_host_iframe");
+        consoleIframe.contentEditable = "true";
+        consoleIframe.sandbox = "allow-scripts allow-forms allow-pointer-lock allow-popups allow-same-origin";
+        consoleIframe.allow = "autoplay; fullscreen; accelerometer; camera; encrypted-media; geolocation; gyroscope; magnetometer; microphone; midi; payment";
 
-        var generator_button = document.getElementById('generator_button');
-        var interface1 = document.getElementById("interface1");
-        var interface2 = document.getElementById("interface2");
+        var generator = document.getElementById('generator_button');
+        var generatorIframe = document.getElementById("generator_iframe");
+        generatorIframe.contentEditable = "true";
+        generatorIframe.sandbox = "allow-scripts allow-forms allow-pointer-lock allow-popups allow-same-origin";
+        generatorIframe.allow = "autoplay; fullscreen; accelerometer; camera; encrypted-media; geolocation; gyroscope; magnetometer; microphone; midi; payment";
+
 
         function updateButtons() {
             button1.classList.toggle('on', locked);
@@ -131,30 +128,31 @@
         });
 
         function toggleNewWindow() {
-            if (isOpen) {
-                iframe.style.display = "none";
+            if (consoleOpen) {
+                consoleIframe.style.display = "none";
                 consoleHost.style.backgroundColor = "#c1d72e";
-                isOpen = false;
+                consoleOpen = false;
             } else {
-                iframe.src = document.getElementById("console_host_link").url;
-                iframe.style.display = "block";
-                iframe.focus();
+                consoleIframe.src = document.getElementById("console_host_link").url;
+                consoleIframe.style.display = "block";
+                consoleIframe.focus();
                 consoleHost.style.backgroundColor = "#dc582a";
-                isOpen = true;
+                consoleOpen = true;
             }
         }
-        
+
         function toggleInterface() {
-            if (generator) {
-                interface1.style.display = "flex";
-                interface2.style.display = "none";
-                generator_button.style.backgroundColor = "#c1d72e";
-                generator = false;
+            if (generatorOpen) {
+                generatorIframe.style.display = "none";
+                generator.style.backgroundColor = "#c1d72e";
+                generatorOpen = false;
             } else {
-                interface1.style.display = "none";
-                interface2.style.display = "flex";
-                generator_button.style.backgroundColor = "#dc582a";
-                generator = true
+                generatorIframe.src = "https://bing.com";
+                // generatorIframe.src = "";
+                generatorIframe.style.display = "block";
+                generatorIframe.focus();
+                generator.style.backgroundColor = "#dc582a";
+                generatorOpen = true;
             }
         }
     </script>
