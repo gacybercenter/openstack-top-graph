@@ -334,7 +334,7 @@ function drawNodes(nodesAndLinks, description) {
         .attr('x', 0)
         .attr('y', 30);                                                             // Modified line to adjust y-coordinate of the title
 
-    const descriptionMaxWidth = width / 3;                                       // Set limits on the description width
+    const descriptionMaxWidth = width / 3;                                          // Set limits on the description width
 
     const info = svg.append("foreignObject")
         .attr("class", "info")

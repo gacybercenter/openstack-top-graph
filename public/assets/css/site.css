@@ -93,7 +93,6 @@ iframe {
     z-index: 2;
 }
 
-
 .console-host {
     display: none;
     background-color: #c1d72e;
@@ -106,22 +105,6 @@ iframe {
     cursor: pointer;
     bottom: 10px;
     right: 10px;
-    position: absolute;
-    z-index: 3;
-}
-
-.generator {
-    display: flex;
-    background-color: #c1d72e;
-    color: #000000;
-    border: none;
-    border-radius: 0px;
-    margin-left: 5px;
-    margin-right: 5px;
-    padding: 5px 10px;
-    cursor: pointer;
-    bottom: 10px;
-    left: 10px;
     position: absolute;
     z-index: 3;
 }

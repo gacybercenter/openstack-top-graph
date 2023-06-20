@@ -31,12 +31,8 @@
             </div>
         </div>
         <iframe id="console_host_iframe" class="iframe" style="display: none;"></iframe>
-        <iframe id="generator_iframe" class="iframe" style="display: none;"></iframe>
         <a id="console_host_link" url="#" onclick="toggleNewWindow()">
             <button id="console_host_button" class="console-host">Toggle Range</button>
-        </a>
-        <a id="generator_link" onclick="toggleInterface()">
-            <button id="generator_button" class="generator">Toggle Generator</button>
         </a>
     </div>
 
@@ -58,7 +54,6 @@
         let tooltips = false;
         let darkMode = false;
         let consoleOpen = false;
-        let generatorOpen = false;
 
         var width = window.innerWidth;
         var height = window.innerHeight;
@@ -68,13 +63,6 @@
         consoleIframe.contentEditable = "true";
         consoleIframe.sandbox = "allow-scripts allow-forms allow-pointer-lock allow-popups allow-same-origin";
         consoleIframe.allow = "autoplay; fullscreen; accelerometer; camera; encrypted-media; geolocation; gyroscope; magnetometer; microphone; midi; payment";
-
-        var generator = document.getElementById('generator_button');
-        var generatorIframe = document.getElementById("generator_iframe");
-        generatorIframe.contentEditable = "true";
-        generatorIframe.sandbox = "allow-scripts allow-forms allow-pointer-lock allow-popups allow-same-origin";
-        generatorIframe.allow = "autoplay; fullscreen; accelerometer; camera; encrypted-media; geolocation; gyroscope; magnetometer; microphone; midi; payment";
-
 
         function updateButtons() {
             button1.classList.toggle('on', locked);
@@ -131,28 +119,13 @@
             if (consoleOpen) {
                 consoleIframe.style.display = "none";
                 consoleHost.style.backgroundColor = "#c1d72e";
-                consoleOpen = false;
             } else {
                 consoleIframe.src = document.getElementById("console_host_link").url;
                 consoleIframe.style.display = "block";
                 consoleIframe.focus();
                 consoleHost.style.backgroundColor = "#dc582a";
-                consoleOpen = true;
             }
-        }
-
-        function toggleInterface() {
-            if (generatorOpen) {
-                generatorIframe.style.display = "none";
-                generator.style.backgroundColor = "#c1d72e";
-                generatorOpen = false;
-            } else {
-                generatorIframe.src = "https://www.bing.com";
-                generatorIframe.style.display = "block";
-                generatorIframe.focus();
-                generator.style.backgroundColor = "#dc582a";
-                generatorOpen = true;
-            }
+            consoleOpen = !consoleOpen;
         }
     </script>
 </body>
