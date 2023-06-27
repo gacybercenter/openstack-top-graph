@@ -89,38 +89,32 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 20px;
 }
 
 .slider-label {
     margin-right: 10px;
 }
 
-.slider {
-    width: 200px;
-}
-
 .slider-charge {
     display: flex;
     align-items: center;
-    margin: 10px;
+    margin: 5px;
     background-color: #c1d72e;
     color: #000000;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 3px;
+    border-radius: 3px;
     width: 200px;
 }
 
 .slider-size {
     display: flex;
     align-items: center;
-    margin: 10px;
+    margin: 5px;
     background-color: #c1d72e;
     color: #000000;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 3px;
+    border-radius: 3px;
     width: 180px;
-    margin-left: 10px;
 }
 
 iframe {
