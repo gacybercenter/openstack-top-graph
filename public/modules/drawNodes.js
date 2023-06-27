@@ -230,7 +230,7 @@ function drawNodes(nodesAndLinks, description) {
         .selectAll('circle')
         .data(nodes)
         .join('circle')
-        .attr('r', d => weights[d.type] * 2.5 || weights.Other * 2.5)
+        .attr('r', d => weights[d.type] * sizeValue || weights.Other * sizeValue)
         .attr('fill', d => colorScale(d.type))
         .on('mouseenter', (event, d) => {
             const tooltip = d3.select('.tooltip');
@@ -413,31 +413,37 @@ function drawNodes(nodesAndLinks, description) {
     /**
      * Updates the positions of nodes, images, text, and links based on the current
      * tick of the force simulation. Also updates the visibility of various UI
-     * elements based on different states such as Show IPs, Lock Nodes, Show Subnets,
-     * Show Info, Hide Legend, and Dark Mode.
+     * elements based on different states.
      */
     function update() {
         svg.attr("width", (window.innerWidth) * 0.98)
             .attr("height", (window.innerHeight - heightOffset) * 0.95);
 
-        nodesGroup
-            .attr("cx", d => d.x)
-            .attr("cy", d => d.y);
+        force.force("charge", d3.forceManyBody()
+            .strength(d => weights[d.type] * -chargeValue || weights.Other * -chargeValue))
 
-        imageGroup
-            .attr("x", d => (d.x - weights[d.type] * 2) || (d.x - weights.Other * 2))
-            .attr("y", d => (d.y - weights[d.type] * 2) || (d.y - weights.Other * 2));
+        nodesGroup.attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr('r', d => weights[d.type] * sizeValue * 2.5 || weights.Other * sizeValue * 2.5);
 
-        textGroup
-            .attr("x", d => d.x)
+        imageGroup.attr("x", d => (d.x - weights[d.type] * sizeValue * 2) ||
+            (d.x - weights.Other * sizeValue * 2))
+            .attr("y", d => (d.y - weights[d.type] * sizeValue * 2) ||
+                (d.y - weights.Other * sizeValue * 2))
+            .attr('width', d => weights[d.type] * sizeValue * 4 || weights.Other * sizeValue * 4)
+            .attr('height', d => weights[d.type] * sizeValue * 4 || weights.Other * sizeValue * 4)
+
+        textGroup.attr("x", d => d.x)
             .attr("y", d => d.y)
+            .attr('dy', d => weights[d.type] * sizeValue * 3.5 || weights.Other * sizeValue * 3.5)
+            .style('font-size', d => weights[d.type] * sizeValue * 1.1 || weights.Other * sizeValue * 1.1)
             .text(d => ips ? d.ip : d.name);
 
-        linksGroup
-            .attr("x1", d => d.source.x)
+        linksGroup.attr("x1", d => d.source.x)
             .attr("y1", d => d.source.y)
             .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y);
+            .attr("y2", d => d.target.y)
+            .attr('stroke-width', sizeValue * 2);
 
         if (wasLocked !== locked) {
             toggleLock();
@@ -459,9 +465,7 @@ function drawNodes(nodesAndLinks, description) {
         }
 
         info.style("visibility", showInfo ? "visible" : "hidden");
-
         legend.style("visibility", hideLegend ? "hidden" : "visible");
-
         textGroup.style("fill", darkMode ? "#eee" : "#111");
         legend.selectAll("text").style("fill", darkMode ? "#ddd" : "#222");
     }

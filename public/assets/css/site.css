@@ -82,6 +82,47 @@ body {
     overflow-y: auto;
 }
 
+.slider-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.slider-label {
+    margin-right: 10px;
+}
+
+.slider {
+    width: 200px;
+}
+
+.slider-charge {
+    display: flex;
+    align-items: center;
+    margin: 10px;
+    background-color: #c1d72e;
+    color: #000000;
+    padding: 10px;
+    border-radius: 10px;
+    width: 200px;
+}
+
+.slider-size {
+    display: flex;
+    align-items: center;
+    margin: 10px;
+    background-color: #c1d72e;
+    color: #000000;
+    padding: 10px;
+    border-radius: 10px;
+    width: 180px;
+    margin-left: 10px;
+}
+
 iframe {
     position: fixed;
     left: 0;
