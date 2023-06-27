@@ -140,17 +140,18 @@ function createDuplicateNodes(node, nodes, links, nodeCounts) {
         links.push({ source: targetNode, target: newNode });
     });
 
-    const duplicateLinks = sourceLinks;
+    const duplicateLinks = [...sourceLinks, ...targetLinks];
     duplicateLinks.forEach(link => {
         const linkIndex = links.indexOf(link);
         links.splice(linkIndex, 1);
     });
 
-    if (uniqueSourceNodes.length === 1) {
+    if (uniqueTargetNodes.length === 1) {
         const sourceType = uniqueSourceNodes[0].type;
         nodeCounts[sourceType] = (nodeCounts[sourceType] || 0) + 1;
     }
 }
+
 
 export {
     clearSVG,
