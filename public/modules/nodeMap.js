@@ -86,8 +86,9 @@ function nodeMap(parsedContent, name) {
             return;
         }
 
-        const isNode = property.get_resource !== undefined || property.port !== undefined;
-        if (isNode) {
+        const isResource = property.get_resource !== undefined
+        const isPort =  property.port !== undefined;
+        if (isResource || isPort) {
             const target = nodes.find(n => n.name === parentResourceName);
             const sourceName = property.get_resource || property.port;
             const source = duplicateNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
