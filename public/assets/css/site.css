@@ -4,7 +4,7 @@ body {
 
 .file-input-label {
     background-color: #c1d72e;
-    color: #000000;
+    color: #000;
     padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
@@ -18,18 +18,16 @@ body {
 .buttons {
     align-items: center;
     justify-content: flex-start;
-    margin-top: 10px;
-    margin-bottom: 10px;
+    margin: 10px 0;
     background: none;
 }
 
 .button {
     background-color: #c1d72e;
-    color: #000000;
+    color: #000;
     border: none;
     border-radius: 10px;
-    margin-left: 5px;
-    margin-right: 5px;
+    margin: 0 5px;
     padding: 5px 10px;
     cursor: pointer;
 }
@@ -59,11 +57,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    margin-top: 0px;
-    margin-bottom: 0px;
-    border-radius: 0px;
-    margin-left: 0px;
-    margin-right: 0px;
+    margin: 0;
+    border-radius: 0;
     padding: 5px 10px;
 }
 
@@ -78,8 +73,7 @@ body {
 .info {
     background-color: #ddd;
     position: absolute;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: auto;
 }
 
 .slider-container {
@@ -95,26 +89,16 @@ body {
     margin-right: 8px;
 }
 
-.slider-charge {
-    display: flex;
-    align-items: center;
-    margin: 5px;
-    background-color: #c1d72e;
-    color: #000000;
-    padding: 3px;
-    border-radius: 3px;
-    width: 200px;
-}
-
+.slider-charge,
 .slider-size {
     display: flex;
     align-items: center;
     margin: 5px;
     background-color: #c1d72e;
-    color: #000000;
+    color: #000;
     padding: 3px;
     border-radius: 3px;
-    width: 180px;
+    width: 200px;
 }
 
 iframe {
@@ -131,11 +115,10 @@ iframe {
 .console-host {
     display: none;
     background-color: #c1d72e;
-    color: #000000;
+    color: #000;
     border: none;
-    border-radius: 0px;
-    margin-left: 5px;
-    margin-right: 5px;
+    border-radius: 0;
+    margin: 0 5px;
     padding: 5px 10px;
     cursor: pointer;
     bottom: 10px;
