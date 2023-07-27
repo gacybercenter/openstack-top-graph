@@ -1,3 +1,50 @@
+import {
+    parseFile
+} from "./utilityFunctions.js";
+
+/**
+ * Asynchronously reads a file and returns its content.
+ *
+ * @param {File} file - The file to be read.
+ * @param {string} fileType - The type of the file.
+ * @return {Promise} A promise that resolves with the content of the file.
+ */
+function readFileAsync(file, fileType) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const content = parseFile(fileType, event.target.result);
+            resolve(content);
+        };
+        reader.onerror = (event) => {
+            reject(new Error('Error reading file.'));
+        };
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+/**
+ * Merges the contents of the source object into the target object.
+ *
+ * @param {object} target - The target object to merge into.
+ * @param {object} source - The source object to merge from.
+ */
+function mergeContents(target, source) {
+    for (const key in source) {
+        if (source.hasOwnProperty(key)) {
+            if (!target.hasOwnProperty(key)) {
+                target[key] = source[key];
+            } else {
+                if (Array.isArray(target[key]) && Array.isArray(source[key])) {
+                    target[key] = [...new Set([...target[key], ...source[key]])];
+                } else if (typeof target[key] === 'object' && typeof source[key] === 'object') {
+                    mergeContents(target[key], source[key]);
+                }
+            }
+        }
+    }
+}
+
 /**
  * Replaces any occurrence of "%index%" in a string or in an object's string values with the provided index,
  * recursively replacing values in arrays and objects.
@@ -104,6 +151,8 @@ function HTMLToIp(html) {
 }
 
 export {
+    readFileAsync,
+    mergeContents,
     replaceIndex,
     formatObject,
     formatObjectToHTML,

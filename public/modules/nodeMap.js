@@ -87,11 +87,19 @@ function nodeMap(parsedContent, name) {
         }
 
         const isResource = property.get_resource !== undefined
-        const isPort =  property.port !== undefined;
-        if (isResource || isPort) {
+        const isPort = property.port !== undefined;
+        const isParam = property.get_param !== undefined &&
+            typeof property.get_param === 'string' &&
+            property.get_param.endsWith("_id");
+
+        if (isResource || isPort || isParam) {
             const target = nodes.find(n => n.name === parentResourceName);
-            const sourceName = property.get_resource || property.port;
-            const source = duplicateNodes.find(n => n.name === sourceName) || nodes.find(n => n.name === sourceName);
+            let sourceName = property.get_resource || property.port || property.get_param;
+            if (isParam) {
+                sourceName = sourceName.replace(/_id$/, "")
+            }
+            const source = duplicateNodes.find(n => n.name === sourceName) ||
+                nodes.find(n => n.name === sourceName);
             if (source && target) {
                 if (target.type === 'RouterInterface' && source.type === 'Subnet') {
                     target.data['fixed_ip'] = source.data['gateway_ip'];
