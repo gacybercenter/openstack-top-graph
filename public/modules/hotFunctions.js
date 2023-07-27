@@ -13,13 +13,38 @@ function getParam(parsedContent, resources = parsedContent.resources, parameters
     for (const [key, value] of Object.entries(resources)) {
         if (isGetParam(value)) {
             const parameterName = value.get_param;
-            if (parameters[parameterName] !== undefined) {
-                resources[key] = parameters[parameterName].default;
+            const parameter = parameters[parameterName];
+            if (parameter !== undefined) {
+                resources[key] = parameters[parameterName].default || parameters[parameterName];
             }
         } else if (isObject(value)) {
             getParam(parsedContent, value, parameters);
         } else if (isArray(value)) {
             value.forEach(item => getParam(parsedContent, item, parameters));
+        }
+    }
+    return parsedContent;
+}
+
+/**
+ * Resolves the IDs in the parsed content by replacing them with the corresponding resource names.
+ *
+ * @param {Object} parsedContent - The parsed content object.
+ * @param {Object} [resources=parsedContent.resources] - The resources object.
+ * @param {Object} [parameters=parsedContent.parameters] - The parameters object.
+ * @return {Object} The parsed content object with resolved IDs.
+ */
+function resolveID(parsedContent, resources = parsedContent.resources, parameters = parsedContent.parameters) {
+    for (const [key, value] of Object.entries(resources)) {
+        if (isUUID(value)) {
+            const resourceName = findResourceName(value, parameters);
+            if (resourceName) {
+                resources[key] = { 'get_resource': resourceName };
+            }
+        } else if (isObject(value)) {
+            resolveID(parsedContent, value, parameters);
+        } else if (isArray(value)) {
+            value.forEach(item => resolveID(parsedContent, item, parameters));
         }
     }
     return parsedContent;
@@ -118,6 +143,33 @@ function isGetParam(value) {
 }
 
 /**
+ * Checks if a given value is a valid UUID.
+ *
+ * @param {any} value - The value to be checked.
+ * @return {boolean} Returns true if the value is a valid UUID, false otherwise.
+ */
+function isUUID(value) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(value);
+}
+
+/**
+ * Finds the resource name based on the given UUID and parameters.
+ *
+ * @param {string} uuid - The UUID to search for.
+ * @param {object} parameters - The parameters object to search in.
+ * @return {string|null} - The resource name, or null if not found.
+ */
+function findResourceName(uuid, parameters) {
+    for (const [paramKey, paramValue] of Object.entries(parameters)) {
+        if (paramValue === uuid || paramValue.default === uuid) {
+            return paramKey.replace(/_id$/, '');
+        }
+    }
+    return null;
+}
+
+/**
  * Checks if the given value has a "str_replace" property that can be used for string replacement.
  *
  * @param {any} value - The value to check.
@@ -187,4 +239,4 @@ function replaceParams(template, params) {
     return replacedTemplate;
 }
 
-export { getParam, strReplace, getFile, listJoin };
+export { getParam, resolveID, strReplace, getFile, listJoin };

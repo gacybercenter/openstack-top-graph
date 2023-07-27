@@ -1,6 +1,5 @@
 import {
     clearSVG,
-    getFileType,
     getTemplateName,
     resolveIntrinsicFunctions,
     parseInputText,
@@ -17,6 +16,7 @@ import {
 } from "./modules/drawNodes.js";
 
 import {
+    moveEnvFilesToFront,
     readFileAsync,
     mergeContents
 } from "./modules/parseFunctions.js";
@@ -27,74 +27,49 @@ const textInput = document.getElementById("text-input");
 fileInput.addEventListener("change", handleFileSelect, false);
 textInput.addEventListener("change", handleTextSelect, false);
 
-/**
- * Processes files inputed into the file container.
- * Can process YAML and JSON Heat Template files.
- * Turns a Heat Template into an interactive topological network graph
- * @param {object} event - The inputted JAML or JSON Heat Template file
- */
 function handleFileSelect(event) {
-    const files = event.target.files;
-    if (!files) {
-        return;
-    }
+/**
+ * Handles the file selection event.
+ *
+ * @param {Event} event - The file selection event.
+ * @return {void} This function does not return anything.
+ */
+    let files = event.target.files;
+    if (!files) return;
+
     clearSVG();
-    const fileName = files[0].name;
-    const fileType = getFileType(fileName)
+    const fileName = getTemplateName(files)
+
+    files = moveEnvFilesToFront(files)
+    console.log(files);
 
     let fileContent = {};
     readMultiFiles(files);
 
+    /**
+     * Reads multiple files and merges their contents.
+     *
+     * @param {Array} files - An array of file paths to read.
+     * @return {Promise} A promise that resolves when all files have been read and merged.
+     */
     async function readMultiFiles(files) {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            const content = await readFileAsync(file, fileType);
+            const content = await readFileAsync(file);
             mergeContents(fileContent, content);
         }
         handleFileLoad(fileContent, fileName)
     }
 }
 
-// /**
-//  * Processes files inputed into the file container.
-//  * Can process YAML and JSON Heat Template files.
-//  * Turns a Heat Template into an interactive topological network graph
-//  * @param {object} event - The inputted JAML or JSON Heat Template file
-//  */
-// function handleFileSelect(event) {
-//     const file = event.target.files[0];
-//     if (!file) {
-//         return;
-//     }
-
-//     try {
-//         clearSVG();
-
-//         const fileType = getFileType(file.name);
-
-//         const reader = new FileReader();
-//         reader.onload = handleFileLoad(fileContent, fileType, file.name);
-
-//         reader.readAsText(file, "UTF-8");
-//     } catch (error) {
-//         alert(`Error: ${error.message}`);
-//     }
-// }
-
 
 /**
- * Returns a function that handles a file load event by parsing the file content,
- * setting the console host, resolving intrinsic functions, mapping nodes and links,
- * and drawing these nodes and links.
+ * Handles the file load event.
  *
- * @param {string} fileType - the type of the loaded file.
- * @param {string} fileName - the name of the loaded file.
- * @param {FileReader} reader - the FileReader object used to read the file.
- * @return {function} a function that handles a file load event.
+ * @param {object} fileContent - The content of the file being loaded.
+ * @param {string} templateName - The name of the template to be used.
  */
-function handleFileLoad(fileContent, fileName) {
-    const templateName = getTemplateName(fileName);
-
+function handleFileLoad(fileContent, templateName) {
     setConsoleHost(fileContent.parameters);
     setTemplateName(fileContent, templateName);
 
@@ -112,13 +87,13 @@ function handleFileLoad(fileContent, fileName) {
  */
 function handleTextSelect(event) {
     try {
-        clearSVG();
-
         const inputText = event.target.value;
         if (!inputText) return;
 
+        clearSVG();
         const parsedContent = parseInputText(inputText);
 
+        setConsoleHost(parsedContent.parameters);
         const file = { name: 'TEMPLATE' };
         if (parsedContent.parameters) {
             parsedContent.parameters['OS::stack_name'] = {
@@ -126,8 +101,6 @@ function handleTextSelect(event) {
                 default: file.name,
             };
         }
-
-        setConsoleHost(parsedContent.parameters);
 
         const templateObj = resolveIntrinsicFunctions(parsedContent);
         const nodesAndLinks = nodeMap(templateObj, file.name);

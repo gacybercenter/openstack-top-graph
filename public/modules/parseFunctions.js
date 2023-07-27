@@ -1,6 +1,28 @@
 import {
-    parseFile
+    parseFile,
+    getFileType
 } from "./utilityFunctions.js";
+
+/**
+ * Moves the environment files to the front of the array.
+ *
+ * @param {Array} files - The array of files to be sorted.
+ * @return {Array} - The sorted array with environment files at the front.
+ */
+function moveEnvFilesToFront(files) {
+    const envFiles = [];
+    const otherFiles = [];
+
+    for (const file of files) {
+        if (file.name.startsWith('env.')) {
+            envFiles.push(file);
+        } else {
+            otherFiles.push(file);
+        }
+    }
+
+    return [...envFiles, ...otherFiles];
+}
 
 /**
  * Asynchronously reads a file and returns its content.
@@ -9,10 +31,11 @@ import {
  * @param {string} fileType - The type of the file.
  * @return {Promise} A promise that resolves with the content of the file.
  */
-function readFileAsync(file, fileType) {
+function readFileAsync(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (event) => {
+            const fileType = getFileType(file.name);
             const content = parseFile(fileType, event.target.result);
             resolve(content);
         };
@@ -23,6 +46,7 @@ function readFileAsync(file, fileType) {
     });
 }
 
+
 /**
  * Merges the contents of the source object into the target object.
  *
@@ -32,14 +56,15 @@ function readFileAsync(file, fileType) {
 function mergeContents(target, source) {
     for (const key in source) {
         if (source.hasOwnProperty(key)) {
-            if (!target.hasOwnProperty(key)) {
-                target[key] = source[key];
-            } else {
-                if (Array.isArray(target[key]) && Array.isArray(source[key])) {
-                    target[key] = [...new Set([...target[key], ...source[key]])];
-                } else if (typeof target[key] === 'object' && typeof source[key] === 'object') {
-                    mergeContents(target[key], source[key]);
-                }
+            const targetValue = target[key];
+            const sourceValue = source[key];
+
+            if (targetValue === undefined) {
+                target[key] = sourceValue;
+            } else if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
+                target[key] = Array.from(new Set([...targetValue, ...sourceValue]));
+            } else if (typeof targetValue === 'object' && typeof sourceValue === 'object') {
+                mergeContents(targetValue, sourceValue);
             }
         }
     }
@@ -151,6 +176,7 @@ function HTMLToIp(html) {
 }
 
 export {
+    moveEnvFilesToFront,
     readFileAsync,
     mergeContents,
     replaceIndex,

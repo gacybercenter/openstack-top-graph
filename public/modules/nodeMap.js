@@ -88,16 +88,10 @@ function nodeMap(parsedContent, name) {
 
         const isResource = property.get_resource !== undefined
         const isPort = property.port !== undefined;
-        const isParam = property.get_param !== undefined &&
-            typeof property.get_param === 'string' &&
-            property.get_param.endsWith("_id");
-
-        if (isResource || isPort || isParam) {
+        if (isResource || isPort) {
             const target = nodes.find(n => n.name === parentResourceName);
-            let sourceName = property.get_resource || property.port || property.get_param;
-            if (isParam) {
-                sourceName = sourceName.replace(/_id$/, "")
-            }
+            let sourceName = property.get_resource || property.port;
+
             const source = duplicateNodes.find(n => n.name === sourceName) ||
                 nodes.find(n => n.name === sourceName);
             if (source && target) {

@@ -1,5 +1,6 @@
 import {
     getParam,
+    resolveID,
     strReplace,
     getFile,
     listJoin
@@ -42,15 +43,21 @@ function parseFile(fileType, fileContent) {
 }
 
 /**
- * Returns the template name from a given file name by splitting the file name
- * at the first period and returning the first part.
+ * Converts an array of file objects into a string of file names without the file extension, separated by commas.
  *
- * @param {string} fileName - The name of the file to extract the template name from.
- * @return {string} The template name extracted from the file name.
+ * @param {Object[]} files - An array of file objects.
+ * @param {string} files[].name - The name of the file.
+ * @returns {string} - A string of file names without the file extension, separated by commas.
  */
-function getTemplateName(fileName) {
-    return fileName.split('.')[0];
+function getTemplateName(files) {
+    let fileNames = [];
+    for (let i = 0; i < files.length; i++) {
+        const fileName = files[i].name.replace(/\.(yaml|yml|json)$/i, '');
+        fileNames.push(fileName);
+    }
+    return fileNames.join(', ');
 }
+
 
 /**
  * Resolves intrinsic functions in parsed content.
@@ -59,7 +66,9 @@ function getTemplateName(fileName) {
  * @return {Object} The resolved template object.
  */
 function resolveIntrinsicFunctions(parsedContent) {
+    console.log(parsedContent);
     let templateObj = getParam(parsedContent);
+    templateObj = resolveID(templateObj);
     templateObj = getFile(templateObj);
     templateObj = strReplace(templateObj);
     templateObj = listJoin(templateObj);
