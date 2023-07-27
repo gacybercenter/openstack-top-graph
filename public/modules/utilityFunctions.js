@@ -66,7 +66,6 @@ function getTemplateName(files) {
  * @return {Object} The resolved template object.
  */
 function resolveIntrinsicFunctions(parsedContent) {
-    console.log(parsedContent);
     let templateObj = getParam(parsedContent);
     templateObj = resolveID(templateObj);
     templateObj = getFile(templateObj);

@@ -41,8 +41,6 @@ function handleFileSelect(event) {
     const fileName = getTemplateName(files)
 
     files = moveEnvFilesToFront(files)
-    console.log(files);
-
     let fileContent = {};
     readMultiFiles(files);
 
