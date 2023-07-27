@@ -405,7 +405,9 @@ function drawNodes(nodesAndLinks, description) {
                 d.fy = null;
             }
         });
-        if (force) {
+        if (locked) {
+            force.stop();
+        } else {
             force.alphaTarget(0.1).restart();
         }
     }
@@ -416,40 +418,48 @@ function drawNodes(nodesAndLinks, description) {
      * elements based on different states.
      */
     function update() {
-        svg.attr("width", (window.innerWidth) * 0.98)
-            .attr("height", (window.innerHeight - heightOffset) * 0.95);
-
+        const svgWidth = (window.innerWidth) * 0.98;
+        const svgHeight = (window.innerHeight - heightOffset) * 0.95;
+    
+        svg.attr("width", svgWidth)
+            .attr("height", svgHeight);
+    
+        const chargeStrength = -chargeValue;
+        const sizeMultiplier = sizeValue * 2.5;
+        const offsetMultiplier = sizeValue * 2;
+        const imageMultiplier = sizeValue * 4;
+        const textMultiplier = sizeValue * 3.5;
+        const fontMultiplier = sizeValue * 1.2;
+    
         force.force("charge", d3.forceManyBody()
-            .strength(d => weights[d.type] * -chargeValue || weights.Other * -chargeValue))
-
+            .strength(d => weights[d.type] * chargeStrength || weights.Other * chargeStrength));
+    
         nodesGroup.attr("cx", d => d.x)
             .attr("cy", d => d.y)
-            .attr('r', d => weights[d.type] * sizeValue * 2.5 || weights.Other * sizeValue * 2.5);
-
-        imageGroup.attr("x", d => (d.x - weights[d.type] * sizeValue * 2) ||
-            (d.x - weights.Other * sizeValue * 2))
-            .attr("y", d => (d.y - weights[d.type] * sizeValue * 2) ||
-                (d.y - weights.Other * sizeValue * 2))
-            .attr('width', d => weights[d.type] * sizeValue * 4 || weights.Other * sizeValue * 4)
-            .attr('height', d => weights[d.type] * sizeValue * 4 || weights.Other * sizeValue * 4)
-
+            .attr('r', d => weights[d.type] * sizeMultiplier || weights.Other * sizeMultiplier);
+    
+        imageGroup.attr("x", d => d.x - weights[d.type] * offsetMultiplier || d.x - weights.Other * offsetMultiplier)
+            .attr("y", d => d.y - weights[d.type] * offsetMultiplier || d.y - weights.Other * offsetMultiplier)
+            .attr('width', d => weights[d.type] * imageMultiplier || weights.Other * imageMultiplier)
+            .attr('height', d => weights[d.type] * imageMultiplier || weights.Other * imageMultiplier);
+    
         textGroup.attr("x", d => d.x)
             .attr("y", d => d.y)
-            .attr('dy', d => weights[d.type] * sizeValue * 3.5 || weights.Other * sizeValue * 3.5)
-            .style('font-size', d => weights[d.type] * sizeValue * 1.1 || weights.Other * sizeValue * 1.1)
+            .attr('dy', d => weights[d.type] * textMultiplier || weights.Other * textMultiplier)
+            .style('font-size', d => weights[d.type] * fontMultiplier || weights.Other * fontMultiplier)
             .text(d => ips ? d.ip : d.name);
-
+    
         linksGroup.attr("x1", d => d.source.x)
             .attr("y1", d => d.source.y)
             .attr("x2", d => d.target.x)
             .attr("y2", d => d.target.y)
-            .attr('stroke-width', sizeValue * 2);
-
+            .attr('stroke-width', offsetMultiplier);
+    
         if (wasLocked !== locked) {
             toggleLock();
             wasLocked = locked;
         }
-
+    
         if (subnet) {
             subnetGroups.each(function (d) {
                 drawPerimeter(d);
@@ -463,13 +473,13 @@ function drawNodes(nodesAndLinks, description) {
                 force.alphaTarget(0.1).restart();
             }
         }
-
+    
         info.style("visibility", showInfo ? "visible" : "hidden");
         legend.style("visibility", hideLegend ? "hidden" : "visible");
         textGroup.style("fill", darkMode ? "#eee" : "#111");
         legend.selectAll("text").style("fill", darkMode ? "#ddd" : "#222");
     }
-
+    
     /**
      * Defines the zoomed function to account for space changing.
      *
