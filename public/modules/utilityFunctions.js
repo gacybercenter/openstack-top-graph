@@ -50,7 +50,7 @@ function parseFile(fileType, fileContent) {
  */
 function getTemplateName(files) {
     if (files.length < 2) return files[0].name.replace(/\.(yaml|yml|json)$/i, '');
-    else return "MULTI-TEMPLATE";
+    else return "TEMPLATE";
 }
 
 
