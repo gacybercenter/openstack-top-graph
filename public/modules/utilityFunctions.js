@@ -43,19 +43,14 @@ function parseFile(fileType, fileContent) {
 }
 
 /**
- * Converts an array of file objects into a string of file names without the file extension, separated by commas.
+ * Converts an array of file objects into a file name without the file extension.
  *
  * @param {Object[]} files - An array of file objects.
- * @param {string} files[].name - The name of the file.
  * @returns {string} - A string of file names without the file extension, separated by commas.
  */
 function getTemplateName(files) {
-    let fileNames = [];
-    for (let i = 0; i < files.length; i++) {
-        const fileName = files[i].name.replace(/\.(yaml|yml|json)$/i, '');
-        fileNames.push(fileName);
-    }
-    return fileNames.join(', ');
+    if (files.length < 2) return files[0].name.replace(/\.(yaml|yml|json)$/i, '');
+    else return "MULTI-TEMPLATE";
 }
 
 
