@@ -172,10 +172,10 @@ function drawNodes(nodesAndLinks, description) {
      * Draws a perimeter around the given subnet node and its linked nodes up to a given depth.
      *
      * @param {object} subnetNode - The node to draw a perimeter around
-     * @param {number} [depth=3] - The depth to search for linked nodes
+     * @param {number} [depth=4] - The depth to search for linked nodes
      * @param {number} [paddingAngle=20] - The angle in degrees to pad the perimeter by
      */
-    function drawPerimeter(subnetNode, depth = 3, paddingAngle = 30) {
+    function drawPerimeter(subnetNode, depth = 4, paddingAngle = 30) {
         const linkedNodes = getLinkedNodes(subnetNode, depth);
         const perimeterNodes = [subnetNode, ...linkedNodes];
         const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));
@@ -205,7 +205,8 @@ function drawNodes(nodesAndLinks, description) {
             const linked = nodes.filter(n =>
                 n !== node &&
                 links.some(link =>
-                    (node === link.source && n === link.target)
+                    (node === link.source && n === link.target) ||
+                    (n === link.source && node === link.target)
                 )
             );
             return linked.reduce((result, n) => {
