@@ -113,36 +113,20 @@ function drawNodes(nodesAndLinks, description) {
         'Other': "./assets/img/question__mark.png"
     }
 
-    const weights = {                                                                   // Assign each node type a weight
-        'Root': 10,
-        'Net': 8,
-        'Subnet': 12,
-        'Router': 10,
-        'RouterInterface': 6,
-        'Server': 10,
-        'Port': 7,
-        'FloatingIP': 5,
-        'FloatingIPAssociation': 5,
-        'ResourceGroup': 10,
-        'SecurityGroup': 5,
-        'ExtraRoute': 7,
-        'WaitCondition': 5,
-        'WaitConditionHandle': 10,
-        'MultipartMime': 8,
-        'SoftwareConfig': 5,
-        'RandomString': 5,
-        'RecordSet': 5,
-        'Zone': 8,
-        'Other': 8
-    };
+    const chargeMultiplier = -150;
+    const sizeMultiplier = 2.5;
+    const offsetMultiplier = 2;
+    const imageMultiplier = 4;
+    const textMultiplier = 3.5;
+    const fontMultiplier = 1.2;
 
     const force = d3.forceSimulation(nodes)                                             // Start a force simulation that updates every tick
         .force("link", d3.forceLink(links).id(d => d.id))
-        .force("charge", d3.forceManyBody()
-            .strength(d => weights[d.type] * -150 || weights.Other * -150))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("x", d3.forceX())
         .force("y", d3.forceY())
+        .force("charge", d3.forceManyBody()
+            .strength(d => d.weight * chargeMultiplier))
         .on("tick", update);
 
     const zoom = d3.zoom()                                                              // Define the zoom function
@@ -225,14 +209,15 @@ function drawNodes(nodesAndLinks, description) {
         .join('line')
         .attr('stroke-width', 2)
         .attr('stroke', d => colorScale(d.source.type))
-        .attr("stroke-opacity", 0.9);
+        .attr("stroke-opacity", 0.9)
+        .attr('stroke-width', offsetMultiplier);
 
     const nodesGroup = svg.append('g')                                              // Define the nodes with color, tooltips, and drag properties
         .selectAll('circle')
         .data(nodes)
         .join('circle')
-        .attr('r', d => weights[d.type] * sizeValue || weights.Other * sizeValue)
         .attr('fill', d => colorScale(d.type))
+        .attr('r', d => d.weight * sizeMultiplier)
         .on('mouseenter', (event, d) => {
             const tooltip = d3.select('.tooltip');
             if (tooltips) {
@@ -260,10 +245,6 @@ function drawNodes(nodesAndLinks, description) {
         .data(nodes)
         .join('image')
         .attr('xlink:href', d => pictures[d.type] || pictures.Other)
-        .attr('width', d => weights[d.type] * 4 || weights.Other * 4)
-        .attr('height', d => weights[d.type] * 4 || weights.Other * 4)
-        .attr('x', d => d.x - weights[d.type] * 2 || d.x - weights.Other * 2)
-        .attr('y', d => d.y - weights[d.type] * 2 || d.y - weights.Other * 2)
         .style('pointer-events', 'none');
 
     const textGroup = svg.append('g')                                               // Define the node text
@@ -271,11 +252,11 @@ function drawNodes(nodesAndLinks, description) {
         .data(nodes)
         .join('text')
         .text(d => d.name)
+        .attr('dy', d => d.weight * textMultiplier)
+        .style('font-size', d => d.weight * fontMultiplier)
         .attr('fill', 'black')
         .attr('text-anchor', 'middle')
-        .attr('dy', d => weights[d.type] * 3.5 || weights.Other * 3.5)
         .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', d => weights[d.type] * 1.1 || weights.Other * 1.1)
         .style('pointer-events', 'none');
 
     const tooltip = d3.select('body')                                               // Define the tooltips
@@ -424,37 +405,23 @@ function drawNodes(nodesAndLinks, description) {
     
         svg.attr("width", svgWidth)
             .attr("height", svgHeight);
-    
-        const chargeStrength = -chargeValue;
-        const sizeMultiplier = sizeValue * 2.5;
-        const offsetMultiplier = sizeValue * 2;
-        const imageMultiplier = sizeValue * 4;
-        const textMultiplier = sizeValue * 3.5;
-        const fontMultiplier = sizeValue * 1.2;
-    
-        force.force("charge", d3.forceManyBody()
-            .strength(d => weights[d.type] * chargeStrength || weights.Other * chargeStrength));
-    
+
         nodesGroup.attr("cx", d => d.x)
-            .attr("cy", d => d.y)
-            .attr('r', d => weights[d.type] * sizeMultiplier || weights.Other * sizeMultiplier);
-    
-        imageGroup.attr("x", d => d.x - weights[d.type] * offsetMultiplier || d.x - weights.Other * offsetMultiplier)
-            .attr("y", d => d.y - weights[d.type] * offsetMultiplier || d.y - weights.Other * offsetMultiplier)
-            .attr('width', d => weights[d.type] * imageMultiplier || weights.Other * imageMultiplier)
-            .attr('height', d => weights[d.type] * imageMultiplier || weights.Other * imageMultiplier);
+            .attr("cy", d => d.y);
+
+        imageGroup.attr("x", d => d.x - d.weight * offsetMultiplier)
+            .attr("y", d => d.y - d.weight * offsetMultiplier)
+            .attr('width', d => d.weight * imageMultiplier)
+            .attr('height', d => d.weight * imageMultiplier);
     
         textGroup.attr("x", d => d.x)
             .attr("y", d => d.y)
-            .attr('dy', d => weights[d.type] * textMultiplier || weights.Other * textMultiplier)
-            .style('font-size', d => weights[d.type] * fontMultiplier || weights.Other * fontMultiplier)
             .text(d => ips ? d.ip : d.name);
     
         linksGroup.attr("x1", d => d.source.x)
             .attr("y1", d => d.source.y)
             .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y)
-            .attr('stroke-width', offsetMultiplier);
+            .attr("y2", d => d.target.y);
     
         if (wasLocked !== locked) {
             toggleLock();

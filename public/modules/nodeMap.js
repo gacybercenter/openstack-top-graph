@@ -128,6 +128,19 @@ function nodeMap(parsedContent, name) {
         createDuplicateNodes(duplicateNode, nodes, links, amounts);
     });
 
+    for (const node of nodes) {
+        node.weight = 200;
+        links.forEach(link => {
+            if (node.name === link.source.name) {
+                node.weight += 300;
+            }
+            if (node.name === link.target.name) {
+                node.weight += 100;
+            }
+        });
+        node.weight **= 0.35;
+    }
+
     return { nodes, links, amounts, title, parameters: parsedContent.parameters };
 }
 

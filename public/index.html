@@ -33,17 +33,6 @@
             </div>
         </div>
 
-        <div class="slider-container">
-            <div class="slider-charge">
-                <label class="slider-label" for="charge-slider">Charge:</label>
-                <input class="charge-slider" type="range" min="50" max="600" value="150" id="charge-slider">
-            </div>
-            <div class="slider-size">
-                <label class="slider-label" for="size-slider">Size:</label>
-                <input class="size-slider" type="range" min="0.5" max="3" value="1" step="0.1" id="size-slider">
-            </div>
-        </div>
-
         <iframe id="console_host_iframe" class="iframe" style="display: none;"></iframe>
         <a id="console_host_link" href="#" onclick="toggleNewWindow()">
             <button id="console_host_button" class="console-host">Toggle Range</button>
@@ -72,8 +61,6 @@
     let tooltips = false;
     let darkMode = false;
     let consoleOpen = false;
-    let chargeValue = 150;
-    let sizeValue = 1;
 
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -130,14 +117,6 @@
         darkMode = !darkMode;
         updateButtons();
     });
-
-    sizeSlider.oninput = function () {
-        sizeValue = this.value;
-    };
-
-    chargeSlider.oninput = function () {
-        chargeValue = this.value;
-    };
 
     function toggleNewWindow() {
         if (consoleOpen) {
