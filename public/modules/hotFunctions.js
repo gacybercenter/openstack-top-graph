@@ -1,5 +1,33 @@
 /**
  * Recursively searches through parsedContent for resources 
+ * containing a get_param:  attribute. If found, replaces it 
+ * with the default value of the corresponding parameter, 
+ * taken from parsedContent. 
+ *
+ * @param {object} parsedContent - The content to search through.
+ * @param {object} [resources=parsedContent.resources] - The current resources being searched.
+ * @param {object} [parameters=parsedContent.parameters] - The parameters to look up.
+ * @returns {object} The modified parsedContent object.
+ */
+function stackName(parsedContent, name, resources = parsedContent.resources) {
+    if (!parsedContent.resources) return parsedContent;
+
+    for (const [key, value] of Object.entries(resources)) {
+        if (isStackName(value)) {
+            if (value.get_param && value.get_param === "OS::stack_name") {
+                resources[key] = name;
+            }
+        } else if (isObject(value)) {
+            stackName(parsedContent, name, value);
+        } else if (isArray(value)) {
+            value.forEach(item => stackName(parsedContent, name, item));
+        }
+    }
+    return parsedContent;
+}
+
+/**
+ * Recursively searches through parsedContent for resources 
  * containing a get_param attribute. If found, replaces it 
  * with the default value of the corresponding parameter, 
  * taken from parsedContent. 
@@ -10,6 +38,8 @@
  * @returns {object} The modified parsedContent object.
  */
 function getParam(parsedContent, resources = parsedContent.resources, parameters = parsedContent.parameters) {
+    if (!parsedContent.resources) return parsedContent;
+
     for (const [key, value] of Object.entries(resources)) {
         if (isGetParam(value)) {
             const parameterName = value.get_param;
@@ -35,6 +65,8 @@ function getParam(parsedContent, resources = parsedContent.resources, parameters
  * @return {Object} The parsed content object with resolved IDs.
  */
 function resolveID(parsedContent, resources = parsedContent.resources, parameters = parsedContent.parameters) {
+    if (!parsedContent.resources) return parsedContent;
+
     for (const [key, value] of Object.entries(resources)) {
         if (isUUID(value)) {
             const resourceName = findResourceName(value, parameters);
@@ -58,6 +90,8 @@ function resolveID(parsedContent, resources = parsedContent.resources, parameter
  * @return {object} the parsed content object with the string templates replaced with their corresponding parameters
  */
 function strReplace(parsedContent, resources = parsedContent.resources) {
+    if (!parsedContent.resources) return parsedContent;
+
     for (const [key, value] of Object.entries(resources)) {
         if (isStrReplaceable(value)) {
             const template = value.str_replace.template;
@@ -82,9 +116,8 @@ function strReplace(parsedContent, resources = parsedContent.resources) {
  * @return {Object} the updated parsedContent object
  */
 function getFile(parsedContent, resources = parsedContent.resources) {
-    if (resources === undefined) {
-        return parsedContent;
-    }
+    if (resources === undefined || !parsedContent.resources) return parsedContent;
+
     for (const [key, value] of Object.entries(resources)) {
         if (isGetFile(value)) {
             const file = value.get_file;
@@ -114,6 +147,8 @@ function getFile(parsedContent, resources = parsedContent.resources) {
  * @return {Object} The parsed content with joined arrays.
  */
 function listJoin(parsedContent, resources = parsedContent.resources) {
+    if (!parsedContent.resources) return parsedContent;
+
     for (const [key, value] of Object.entries(resources)) {
         if (isListJoin(value)) {
             const delimiter = value.list_join[0];
@@ -130,6 +165,16 @@ function listJoin(parsedContent, resources = parsedContent.resources) {
         }
     }
     return parsedContent;
+}
+
+/**
+ * Checks if the given value has a 'get_param' property.
+ *
+ * @param {any} value - The value to be checked.
+ * @return {boolean} Returns true if the value has a 'get_param' property, false otherwise.
+ */
+function isStackName(value) {
+    return value && value.get_param && value.get_param === "OS::stack_name";
 }
 
 /**
@@ -239,4 +284,4 @@ function replaceParams(template, params) {
     return replacedTemplate;
 }
 
-export { getParam, resolveID, strReplace, getFile, listJoin };
+export { stackName, getParam, resolveID, strReplace, getFile, listJoin };

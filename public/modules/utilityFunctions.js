@@ -53,7 +53,6 @@ function getTemplateName(files) {
     else return "TEMPLATE";
 }
 
-
 /**
  * Resolves intrinsic functions in parsed content.
  *
@@ -61,12 +60,11 @@ function getTemplateName(files) {
  * @return {Object} The resolved template object.
  */
 function resolveIntrinsicFunctions(parsedContent) {
-    let templateObj = getParam(parsedContent);
-    templateObj = resolveID(templateObj);
-    templateObj = getFile(templateObj);
-    templateObj = strReplace(templateObj);
-    templateObj = listJoin(templateObj);
-    return templateObj;
+    parsedContent = getParam(parsedContent);
+    parsedContent = resolveID(parsedContent);
+    parsedContent = getFile(parsedContent);
+    parsedContent = strReplace(parsedContent);
+    parsedContent = listJoin(parsedContent);
 }
 
 /**
@@ -77,20 +75,6 @@ function resolveIntrinsicFunctions(parsedContent) {
  */
 function parseInputText(inputText) {
     return jsyaml.safeLoad(inputText) || JSON.parse(inputText);
-}
-
-/**
- * Sets the template name in the parsedContent object.
- *
- * @param {object} parsedContent - The content to modify.
- * @param {string} templateName - The name of the template.
- * @return {object} The modified parsedContent object.
- */
-function setTemplateName(parsedContent, templateName) {
-    if (parsedContent.parameters) {
-        parsedContent.parameters['OS::stack_name'] = { type: 'string', default: templateName };
-        return parsedContent;
-    }
 }
 
 /**
@@ -163,7 +147,6 @@ export {
     getTemplateName,
     resolveIntrinsicFunctions,
     parseInputText,
-    setTemplateName,
     setConsoleHost,
     createDuplicateNodes
 };

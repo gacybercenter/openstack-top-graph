@@ -10,17 +10,14 @@ import {
  * Parses through the data extracting information like: nodes, links, and the title.
  * It also duplicates attached security groups and adds a root node.
  * @param {object} parsedContent - The parsed JAML or JSON
- * @param {object} name - The JAML or JSON file name
  * @returns {object} - The { nodes, links, amounts, title, and parameters }
  */
-function nodeMap(parsedContent, name) {
+function nodeMap(parsedContent) {
     const root = { name: "cloud", type: "Root" };                                       // Initialize the data structures.
     const amounts = { Root: 1 };
     const nodes = [root];
     const links = [];
     const duplicateNodes = [];
-
-    let title = name || "No name found.";
 
     /**
      * Creates a node object based on the given resource and resource name,
@@ -91,9 +88,14 @@ function nodeMap(parsedContent, name) {
         if (isResource || isPort) {
             const target = nodes.find(n => n.name === parentResourceName);
             let sourceName = property.get_resource || property.port;
+            let source = nodes.find(n => n.name === sourceName) ||
+                duplicateNodes.find(n => n.name === sourceName);
 
-            const source = duplicateNodes.find(n => n.name === sourceName) ||
-                nodes.find(n => n.name === sourceName);
+            if (!source) {
+                source = nodes.find(n => n.data && n.data.name === sourceName) ||
+                    duplicateNodes.find(n => n.data && n.data.name === sourceName);
+            }
+
             if (source && target) {
                 if (target.type === 'RouterInterface' && source.type === 'Subnet') {
                     target.data['fixed_ip'] = source.data['gateway_ip'];
@@ -141,7 +143,7 @@ function nodeMap(parsedContent, name) {
         node.weight **= 0.5;
     }
 
-    return { nodes, links, amounts, title, parameters: parsedContent.parameters };
+    return { nodes, links, amounts, parameters: parsedContent.parameters };
 }
 
 export { nodeMap };

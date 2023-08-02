@@ -135,17 +135,18 @@ function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
  * @return {Object} An object with two properties: short and long. Both are HTML strings.
  */
 function formatObjectToHTML(result) {
+    const excluded = ['template', 'user_data_format', 'config', 'user_data'];
     let short = '';
     let long = '';
     for (const [resultKey, values] of Object.entries(result)) {
         if (values.length > 1) {
             long += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
-            if (['template', 'user_data_format', 'config', 'user_data'].indexOf(resultKey) === -1) {
+            if (excluded.indexOf(resultKey) === -1) {
                 short += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
             }
         } else {
             long += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
-            if (['template', 'user_data_format', 'config', 'user_data'].indexOf(resultKey) === -1) {
+            if (excluded.indexOf(resultKey) === -1) {
                 short += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
             }
         }

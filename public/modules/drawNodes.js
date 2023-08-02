@@ -11,11 +11,11 @@ import {
 * @param {string} description - The Node Map's description pulled from the YAML/JSON
 */
 function drawNodes(nodesAndLinks, description) {
+    if (!nodesAndLinks) return;
+
     const nodes = nodesAndLinks.nodes;                                                  // Separates the nodes from the input
     const links = nodesAndLinks.links;                                                  // Separates the links from the input
     const amounts = nodesAndLinks.amounts                                               // Separates the amounts from the input
-
-    const title = nodesAndLinks.title;                                                  // Separates the title from the input
 
     const width = window.innerWidth                                                     // Stores the window width
     const height = window.innerHeight                                                   // Stores the window height
@@ -26,7 +26,7 @@ function drawNodes(nodesAndLinks, description) {
     for (var node of nodes) {
         let info = formatObject(node.data);                                             // Formats each node's data
         node.info = formatObjectToHTML(info);                                           // Converts each node's data to html
-        node.ip = HTMLToIp(node.info.long);                                           // Adds each node's IP address from the html
+        node.ip = HTMLToIp(node.info.long);                                             // Adds each node's IP address from the html
     }
 
     /**
@@ -298,7 +298,7 @@ function drawNodes(nodesAndLinks, description) {
         .style("fill", "#222");
 
     legend.append('text')                                                           // Define the title
-        .text(title)
+        .text('Legend')
         .attr('fill', 'black')
         .attr('text-anchor', 'left')
         .style('font-family', "Verdana, Helvetica, Sans-Serif")
@@ -308,7 +308,7 @@ function drawNodes(nodesAndLinks, description) {
             return length > window.innerWidth ? window.innerWidth / 4 : length;
         })
         .attr('lengthAdjust', 'spacingAndGlyphs')
-        .attr('title', title)
+        .attr('title', 'Legend')
         .attr('x', 0)
         .attr('y', 30);                                                             // Modified line to adjust y-coordinate of the title
 

@@ -3,7 +3,6 @@ import {
     getTemplateName,
     resolveIntrinsicFunctions,
     parseInputText,
-    setTemplateName,
     setConsoleHost
 } from "./modules/utilityFunctions.js";
 
@@ -14,6 +13,10 @@ import {
 import {
     drawNodes
 } from "./modules/drawNodes.js";
+
+import {
+    stackName
+} from "./modules/hotFunctions.js";
 
 import {
     moveEnvFilesToFront,
@@ -38,7 +41,6 @@ function handleFileSelect(event) {
     if (!files) return;
 
     clearSVG();
-    const fileName = getTemplateName(files)
 
     files = moveEnvFilesToFront(files)
     let fileContent = {};
@@ -53,10 +55,13 @@ function handleFileSelect(event) {
     async function readMultiFiles(files) {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            const content = await readFileAsync(file);
+            const name = getTemplateName([file])
+            let content = await readFileAsync(file);
+
+            content = stackName(content, name);
             mergeContents(fileContent, content);
         }
-        handleFileLoad(fileContent, fileName)
+        handleFileLoad(fileContent);
     }
 }
 
@@ -65,16 +70,13 @@ function handleFileSelect(event) {
  * Handles the file load event.
  *
  * @param {object} fileContent - The content of the file being loaded.
- * @param {string} templateName - The name of the template to be used.
  */
-function handleFileLoad(fileContent, templateName) {
+function handleFileLoad(fileContent) {
     setConsoleHost(fileContent.parameters);
-    setTemplateName(fileContent, templateName);
+    resolveIntrinsicFunctions(fileContent);
 
-    const templateObj = resolveIntrinsicFunctions(fileContent);
-    const nodesAndLinks = nodeMap(templateObj, templateName);
-
-    drawNodes(nodesAndLinks, templateObj.description);
+    const nodesAndLinks = nodeMap(fileContent);
+    drawNodes(nodesAndLinks, fileContent.description);
 }
 
 /**
