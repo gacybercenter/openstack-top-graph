@@ -129,16 +129,16 @@ function nodeMap(parsedContent, name) {
     });
 
     for (const node of nodes) {
-        node.weight = 200;
+        node.weight = 50;
         links.forEach(link => {
-            if (node.name === link.source.name) {
-                node.weight += 300;
+            if (node.data === link.source.data) {
+                node.weight += 25;
             }
-            if (node.name === link.target.name) {
-                node.weight += 100;
+            if (node.data === link.target.data) {
+                node.weight += 10;
             }
         });
-        node.weight **= 0.35;
+        node.weight **= 0.5;
     }
 
     return { nodes, links, amounts, title, parameters: parsedContent.parameters };

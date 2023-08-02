@@ -130,7 +130,7 @@ function drawNodes(nodesAndLinks, description) {
         .on("tick", update);
 
     const zoom = d3.zoom()                                                              // Define the zoom function
-        .scaleExtent([0.2, 5])
+        .scaleExtent([0.1, 5])
         .on('zoom', zoomed);
 
     const svg = d3.select('body')                                                       // Define the main svg body for the topology
@@ -159,7 +159,7 @@ function drawNodes(nodesAndLinks, description) {
      * @param {number} [depth=4] - The depth to search for linked nodes
      * @param {number} [paddingAngle=20] - The angle in degrees to pad the perimeter by
      */
-    function drawPerimeter(subnetNode, depth = 4, paddingAngle = 30) {
+    function drawPerimeter(subnetNode, depth = 4, paddingAngle = 20) {
         const linkedNodes = getLinkedNodes(subnetNode, depth);
         const perimeterNodes = [subnetNode, ...linkedNodes];
         const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));
@@ -170,9 +170,10 @@ function drawNodes(nodesAndLinks, description) {
         const centroid = d3.polygonCentroid(hull);
         const paddedHull = hull.map(point => {
             const angle = Math.atan2(point[1] - centroid[1], point[0] - centroid[0]);
+            const padding = paddingAngle * subnetNode.weight ** 0.35;
             return [
-                point[0] + paddingAngle * Math.cos(angle),
-                point[1] + paddingAngle * Math.sin(angle)
+                point[0] + padding * Math.cos(angle),
+                point[1] + padding * Math.sin(angle)
             ];
         });
         const expandedHull = paddedHull.map(point => point.join(',')).join(' ');
@@ -190,7 +191,7 @@ function drawNodes(nodesAndLinks, description) {
                 n !== node &&
                 links.some(link =>
                     (node === link.source && n === link.target) ||
-                    (n === link.source && node === link.target)
+                    (n.type === 'Net' && n === link.source && node === link.target)
                 )
             );
             return linked.reduce((result, n) => {
@@ -402,7 +403,7 @@ function drawNodes(nodesAndLinks, description) {
     function update() {
         const svgWidth = (window.innerWidth) * 0.98;
         const svgHeight = (window.innerHeight - heightOffset) * 0.95;
-    
+
         svg.attr("width", svgWidth)
             .attr("height", svgHeight);
 
@@ -413,21 +414,21 @@ function drawNodes(nodesAndLinks, description) {
             .attr("y", d => d.y - d.weight * offsetMultiplier)
             .attr('width', d => d.weight * imageMultiplier)
             .attr('height', d => d.weight * imageMultiplier);
-    
+
         textGroup.attr("x", d => d.x)
             .attr("y", d => d.y)
             .text(d => ips ? d.ip : d.name);
-    
+
         linksGroup.attr("x1", d => d.source.x)
             .attr("y1", d => d.source.y)
             .attr("x2", d => d.target.x)
             .attr("y2", d => d.target.y);
-    
+
         if (wasLocked !== locked) {
             toggleLock();
             wasLocked = locked;
         }
-    
+
         if (subnet) {
             subnetGroups.each(function (d) {
                 drawPerimeter(d);
@@ -441,13 +442,13 @@ function drawNodes(nodesAndLinks, description) {
                 force.alphaTarget(0.1).restart();
             }
         }
-    
+
         info.style("visibility", showInfo ? "visible" : "hidden");
         legend.style("visibility", hideLegend ? "hidden" : "visible");
         textGroup.style("fill", darkMode ? "#eee" : "#111");
         legend.selectAll("text").style("fill", darkMode ? "#ddd" : "#222");
     }
-    
+
     /**
      * Defines the zoomed function to account for space changing.
      *
