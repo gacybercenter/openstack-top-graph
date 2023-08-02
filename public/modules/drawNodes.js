@@ -157,9 +157,8 @@ function drawNodes(nodesAndLinks, description) {
      *
      * @param {object} subnetNode - The node to draw a perimeter around
      * @param {number} [depth=4] - The depth to search for linked nodes
-     * @param {number} [paddingAngle=1] - The angle in degrees to pad the perimeter by
      */
-    function drawPerimeter(subnetNode, depth = 4, paddingAngle = 1) {
+    function drawPerimeter(subnetNode, depth = 4) {
         const linkedNodes = getLinkedNodes(subnetNode, depth);
         const perimeterNodes = [subnetNode, ...linkedNodes];
         const hull = d3.polygonHull(perimeterNodes.map(node => [node.x, node.y]));
@@ -170,7 +169,7 @@ function drawNodes(nodesAndLinks, description) {
         const centroid = d3.polygonCentroid(hull);
         const paddedHull = hull.map(point => {
             const angle = Math.atan2(point[1] - centroid[1], point[0] - centroid[0]);
-            const padding = paddingAngle * subnetNode.weight * sizeMultiplier;
+            const padding = subnetNode.weight * sizeMultiplier;
             return [
                 point[0] + padding * Math.cos(angle),
                 point[1] + padding * Math.sin(angle)
