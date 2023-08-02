@@ -305,7 +305,7 @@ function drawNodes(nodesAndLinks, description) {
         .style('font-size', "24px")
         .attr('textLength', function () {
             const length = this.getComputedTextLength();
-            return length > titleMaxWidth ? window.innerWidth / 4 : length;
+            return length > window.innerWidth ? window.innerWidth / 4 : length;
         })
         .attr('lengthAdjust', 'spacingAndGlyphs')
         .attr('title', title)
