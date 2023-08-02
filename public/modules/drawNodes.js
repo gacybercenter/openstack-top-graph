@@ -297,8 +297,6 @@ function drawNodes(nodesAndLinks, description) {
         .style("font-size", "16px")
         .style("fill", "#222");
 
-    const titleMaxWidth = width / 4;                                                // Set limits on the title width
-
     legend.append('text')                                                           // Define the title
         .text(title)
         .attr('fill', 'black')
@@ -307,20 +305,18 @@ function drawNodes(nodesAndLinks, description) {
         .style('font-size', "24px")
         .attr('textLength', function () {
             const length = this.getComputedTextLength();
-            return length > titleMaxWidth ? titleMaxWidth : length;
+            return length > titleMaxWidth ? window.innerWidth / 4 : length;
         })
         .attr('lengthAdjust', 'spacingAndGlyphs')
         .attr('title', title)
         .attr('x', 0)
         .attr('y', 30);                                                             // Modified line to adjust y-coordinate of the title
 
-    const descriptionMaxWidth = width / 3;                                          // Set limits on the description width
-
     const info = svg.append("foreignObject")
         .attr("class", "info")
         .attr("x", width * (1 - 0.4))
         .attr("y", 0)
-        .attr("width", descriptionMaxWidth + 50)
+        .attr("width", window.innerWidth / 3 + 50)
         .attr("height", "100%")
         .style("position", "absolute")
         .style("overflow-x", "scroll")
