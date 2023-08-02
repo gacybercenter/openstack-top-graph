@@ -219,10 +219,10 @@ function drawNodes(nodesAndLinks, description) {
         .on('mouseenter', (event, d) => {
             const tooltip = d3.select('.tooltip');
             if (tooltips) {
-                tooltip.style('max-width', width / 3 + 'px'),
-                    tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info.long}`);
+                tooltip.style('max-width', window.innerWidth / 3 + 'px');
+                tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info.long}`);
             } else {
-                tooltip.style('max-width', width / 5 + 'px');
+                tooltip.style('max-width', window.innerWidth / 5 + 'px');
                 tooltip.html(`<p><strong>${d.name} (${d.type})</strong></p>${d.info.short}`);
             }
             tooltip.style('visibility', 'visible');
