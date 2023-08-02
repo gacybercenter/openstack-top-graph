@@ -207,10 +207,8 @@ function drawNodes(nodesAndLinks, description) {
         .selectAll('line')
         .data(links)
         .join('line')
-        .attr('stroke-width', 2)
         .attr('stroke', d => colorScale(d.source.type))
-        .attr("stroke-opacity", 0.9)
-        .attr('stroke-width', offsetMultiplier);
+        .attr('stroke-width', sizeMultiplier);
 
     const nodesGroup = svg.append('g')                                              // Define the nodes with color, tooltips, and drag properties
         .selectAll('circle')
