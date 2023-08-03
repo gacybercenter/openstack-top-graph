@@ -52,8 +52,9 @@ function readFileAsync(file) {
  *
  * @param {object} target - The target object to merge into.
  * @param {object} source - The source object to merge from.
+ * @param {boolean} array - Whether to merge arrays or objects.
  */
-function mergeContents(target, source) {
+function mergeContents(target, source, array = false) {
     for (const key in source) {
         if (source.hasOwnProperty(key)) {
             const targetValue = target[key];
@@ -71,6 +72,14 @@ function mergeContents(target, source) {
                 target[key] = Array.from(new Set([...targetValue, ...sourceValue]));
             } else if (typeof targetValue === 'object' && typeof sourceValue === 'object') {
                 mergeContents(targetValue, sourceValue);
+            }
+            if (array) {
+                if (Array.isArray(targetValue)) {
+                    target[key].push(sourceValue);
+                } else {
+                    target[key] = [targetValue, sourceValue];
+                }
+                target[key] = target[key].filter(item => item !== undefined);
             }
         }
     }

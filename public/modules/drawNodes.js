@@ -98,6 +98,7 @@ function drawNodes(nodesAndLinks, description) {
         'RouterInterface': "./assets/img/os__neutron__routerinterface.svg",
         'Server': "./assets/img/os__nova__server.svg",
         'Port': "./assets/img/os__neutron__port.svg",
+        'ServerPort': "./assets/img/os__nova__serverport.svg",
         'FloatingIP': "./assets/img/os__neutron__floatingip.svg",
         'FloatingIPAssociation': "./assets/img/os__neutron__floatingipassociation.svg",
         'ResourceGroup': "./assets/img/os__heat__resourcegroup.svg",
@@ -122,7 +123,7 @@ function drawNodes(nodesAndLinks, description) {
 
     const force = d3.forceSimulation(nodes)                                             // Start a force simulation that updates every tick
         .force("link", d3.forceLink(links).id(d => d.id))
-        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("center", d3.forceCenter(width / 2, height / 2, 1))
         .force("x", d3.forceX())
         .force("y", d3.forceY())
         .force("charge", d3.forceManyBody()

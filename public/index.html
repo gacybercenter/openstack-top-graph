@@ -20,6 +20,7 @@
             <button id="hideLegend" class="button">Hide Legend</button>
             <button id="tooltips" class="button">Tooltips +</button>
             <button id="darkMode" class="button">Dark Mode</button>
+            <button id="mergePorts" class="button">Merge Ports</button>
         </div>
 
         <div class="file-input-container">
@@ -50,8 +51,7 @@
     const button5 = document.getElementById('hideLegend');
     const button6 = document.getElementById('tooltips');
     const button7 = document.getElementById('darkMode');
-    const chargeSlider = document.getElementById('charge-slider');
-    const sizeSlider = document.getElementById('size-slider');
+    const button8 = document.getElementById('mergePorts');
 
     let locked = false;
     let subnet = false;
@@ -60,6 +60,7 @@
     let hideLegend = false;
     let tooltips = false;
     let darkMode = false;
+    let mergePorts = false;
     let consoleOpen = false;
 
     const width = window.innerWidth;
@@ -79,6 +80,7 @@
         button5.classList.toggle('on', hideLegend);
         button6.classList.toggle('on', tooltips);
         button7.classList.toggle('on', darkMode);
+        button8.classList.toggle('on', mergePorts);
 
         document.body.style.backgroundColor = darkMode ? '#222222' : '#f5f5f5';
     }
@@ -117,6 +119,16 @@
         darkMode = !darkMode;
         updateButtons();
     });
+
+    button8.addEventListener('click', () => {
+        const svg = document.querySelector('svg');
+        const tooltip = document.querySelector('.tooltip');
+        if (svg) svg.remove();
+        if (tooltip) tooltip.remove();
+    
+        mergePorts = !mergePorts;
+        updateButtons();
+    })
 
     function toggleNewWindow() {
         if (consoleOpen) {
