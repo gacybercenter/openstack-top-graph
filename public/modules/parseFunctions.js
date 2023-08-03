@@ -59,6 +59,12 @@ function mergeContents(target, source) {
             const targetValue = target[key];
             const sourceValue = source[key];
 
+            if (key === 'resources' && typeof targetValue === 'object' && typeof sourceValue === 'object') {
+                const sharedKey = Object.keys(targetValue).find(k => sourceValue.hasOwnProperty(k));
+                if (sharedKey) {
+                    alert(`Duplicate resource found: ${sharedKey}\n(This resource will be ignored!)`);
+                }
+            }
             if (targetValue === undefined) {
                 target[key] = sourceValue;
             } else if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
