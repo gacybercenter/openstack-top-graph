@@ -201,16 +201,10 @@ function nodeMap(parsedContent) {
     });
 
     for (const node of nodes) {
-        node.weight = 50;
-        links.forEach(link => {
-            if (node.data === link.source.data) {
-                node.weight += 25;
-            }
-            if (node.data === link.target.data) {
-                node.weight += 10;
-            }
-        });
-        node.weight **= 0.5;
+        let sourceNumber = links.filter(link => link.source === node).length;
+        let targetNumber = links.filter(link => link.target === node).length;
+
+        node.weight = (50 + sourceNumber * 25 + targetNumber * 10) ** 0.5;
     }
 
     return { nodes, links, amounts, parameters: parsedContent.parameters };
