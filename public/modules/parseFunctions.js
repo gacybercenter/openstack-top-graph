@@ -150,24 +150,26 @@ function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
  * @return {Object} An object with two properties: short and long. Both are HTML strings.
  */
 function formatObjectToHTML(result) {
-    const excluded = ['template', 'user_data_format', 'config', 'user_data'];
+    const excluded = ['template', 'user_data_format', 'config', 'user_data', 'get_attr'];
     let short = '';
     let long = '';
     for (const [resultKey, values] of Object.entries(result)) {
-        if (values.length > 1) {
-            long += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
-            if (excluded.indexOf(resultKey) === -1) {
-                short += `<strong>${resultKey}: </strong>${values.join(', ')}<br/>`;
-            }
-        } else {
-            long += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
-            if (excluded.indexOf(resultKey) === -1) {
-                short += `<strong>${resultKey}: </strong>${values[0]}<br/>`;
-            }
+      const uniqueValues = Array.from(new Set(values)); // Use a Set to store unique values
+      if (uniqueValues.length > 1) {
+        long += `<strong>${resultKey}: </strong>${uniqueValues.join(', ')}<br/>`;
+        if (excluded.indexOf(resultKey) === -1) {
+          short += `<strong>${resultKey}: </strong>${uniqueValues.join(', ')}<br/>`;
         }
+      } else {
+        long += `<strong>${resultKey}: </strong>${uniqueValues[0]}<br/>`;
+        if (excluded.indexOf(resultKey) === -1) {
+          short += `<strong>${resultKey}: </strong>${uniqueValues[0]}<br/>`;
+        }
+      }
     }
     return { short, long };
-}
+  }
+  
 
 /**
  * Parses HTML and extracts IP address(es).
