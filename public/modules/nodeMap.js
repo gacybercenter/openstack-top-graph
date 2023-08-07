@@ -17,8 +17,8 @@ function nodeMap(parsedContent) {
     const root = { name: "cloud", type: "Root" };                                       // Initialize the data structures.
     const amounts = { Root: 1 };
     let nodes = [root];
-    const links = [];
-    const duplicateNodes = [];
+    let links = [];
+    let duplicateNodes = [];
 
     /**
      * Creates a node object based on the given resource and resource name,
@@ -89,85 +89,45 @@ function nodeMap(parsedContent) {
         }
     }
 
-/**
- * Merges the port of a property with the data of the parent resource.
- *
- * @param {object} property - The property object to merge.
- * @param {string} parentResourceName - The name of the parent resource.
- * @param {array} convertedNodes - An array of converted nodes.
- * @param {object} amounts - An object containing the amounts of different types.
- */
-function mergePort(property, parentResourceName, convertedNodes, amounts) {
-    const action = (property, parentResourceName) => {
-        const isResource = property.get_resource !== undefined;
-        const isPort = property.port !== undefined;
+    /**
+     * Links a resource to its parent resource based on a property name.
+     *
+     * @param {object | array} property - The property to search for.
+     * @param {string} parentResourceName - The name of the parent resource to link.
+     * @returns {Array} - The list of connected nodes.
+     */
+    function getPortLinks(property, parentResourceName, nodes, amounts) {
+        const portLinks = [];
 
-        if (isResource || isPort) {
-            let target = nodes.find(n => n.name === parentResourceName);
-            let sourceName = property.get_resource || property.port;
-            let source = nodes.find(n => n.name === sourceName) ||
-                duplicateNodes.find(n => n.name === sourceName);
+        const action = (property, parentResourceName) => {
+            const isResource = property.get_resource !== undefined;
+            const isPort = property.port !== undefined;
 
-            if (source && target && (source.type === 'Port' || source.type === 'ServerPort')) {
-                if (target.type === 'Server') {
-                    const sourceData = source.data;
-                    mergeContents(target.data, sourceData, true);
+            if (isResource || isPort) {
+                let target = nodes.find(n => n.name === parentResourceName);
+                let sourceName = property.get_resource || property.port;
+                let source = nodes.find(n => n.name === sourceName) ||
+                    duplicateNodes.find(n => n.name === sourceName);
 
-                    target.type = 'ServerPort';
-                    target.name = source.name;
-                    amounts['ServerPort'] = (amounts['ServerPort'] || 0) + 1;
-                    amounts['Server'] -= 1;
-                } else if (target.type === 'ServerPort') {
-                    mergeContents(target.data, source.data, true);
-                    if (!target.name.includes(source.name)) {
-                        target.name += `, ${source.name}`;
+                if (source && target && source.type === 'Port') {
+                    if (target.type === 'Server') {
+                        amounts['ServerPort'] = (amounts['ServerPort'] || 0) + 1;
+                        amounts['Server'] -= 1;
+                        amounts['Port'] -= 1;
+                        target.type = 'ServerPort';
+                        portLinks.push({ source, target });
+                    } else if (target.type === 'ServerPort') {
+                        amounts['Port'] -= 1;
+                        portLinks.push({ source, target });
                     }
                 }
             }
-        }
-    };
+        };
 
-    traverseObject(property, action, parentResourceName);
-}
+        traverseObject(property, action, parentResourceName);
 
-/**
- * Merges the port of a property with the data of the parent resource.
- *
- * @param {object} property - The property object to merge.
- * @param {string} parentResourceName - The name of the parent resource.
- * @param {object} amounts - An object containing the amounts of different types.
- */
-function mergePort(property, parentResourceName, amounts) {
-    const action = (property, parentResourceName) => {
-        const isResource = property.get_resource !== undefined;
-        const isPort = property.port !== undefined;
-
-        if (isResource || isPort) {
-            let target = nodes.find(n => n.name === parentResourceName);
-            let sourceName = property.get_resource || property.port;
-            let source = nodes.find(n => n.name === sourceName) ||
-                duplicateNodes.find(n => n.name === sourceName);
-
-            if (source && target && (source.type === 'Port' || source.type === 'ServerPort')) {
-                if (target.type === 'Server') {
-                    mergeContents(source.data, target.data, true);
-
-                    target.type = 'ServerPort';
-                    target.name = source.name;
-                    amounts['ServerPort'] = (amounts['ServerPort'] || 0) + 1;
-                    amounts['Server'] -= 1;
-                } else if (target.type === 'ServerPort') {
-                    mergeContents(target.data, source.data, true);
-                    if (!target.name.includes(source.name)) {
-                        target.name = target.name.concat(`, ${source.name}`);
-                    }
-                }
-            }
-        }
-    };
-
-    traverseObject(property, action, parentResourceName);
-}
+        return portLinks;
+    }
 
 
     /**
@@ -176,7 +136,7 @@ function mergePort(property, parentResourceName, amounts) {
      * @param {object | array} property - The property to search for.
      * @param {string} parentResourceName - The name of the parent resource to link.
      */
-    function getResource(property, parentResourceName) {
+    function getResource(property, parentResourceName, nodes) {
         const action = (property, parentResourceName) => {
             const isResource = property.get_resource !== undefined;
             const isPort = property.port !== undefined;
@@ -188,6 +148,12 @@ function mergePort(property, parentResourceName, amounts) {
                     duplicateNodes.find(n => n.name === sourceName);
 
                 if (source && target) {
+                    if (mergePorts && source.type === 'Port') {
+                        let newSource = portLinks.find(link => link.source === source);
+                        if (newSource && newSource.target) {
+                            source = newSource.target
+                        }
+                    }
                     if (target.type === 'RouterInterface' && source.type === 'Subnet') {
                         target.data['fixed_ip'] = source.data['gateway_ip'];
                     }
@@ -208,22 +174,27 @@ function mergePort(property, parentResourceName, amounts) {
         }
     }
 
+    const portLinks = [];
+
     if (mergePorts) {
         for (const node of nodes) {
             if (node.data) {
-                mergePort(node.data, node.name, amounts);
+                portLinks.push(...getPortLinks(node.data, node.name, nodes, amounts));
             }
         }
-        nodes = nodes.filter(n => n.type !== 'Port');
-    }
+        for (const portLink of portLinks) {
+            mergeContents(portLink.target, portLink.source);
+        }
+    } 
 
     for (const node of nodes) {
         if (node.data) {
-            getResource(node.data, node.name);
+            getResource(node.data, node.name, nodes, amounts);
         }
     }
 
-    console.log(links);
+    nodes = nodes.filter(node => !portLinks.some(link => link.source === node));
+    links = links.filter(link => nodes.includes(link.source && link.target));
 
     duplicateNodes.forEach(duplicateNode => {
         createDuplicateNodes(duplicateNode, nodes, links, amounts);

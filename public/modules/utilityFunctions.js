@@ -106,8 +106,8 @@ function setConsoleHost(parameters) {
  * @param {Object} nodeCounts - An object containing the count of each type of node in the graph.
  */
 function createDuplicateNodes(node, nodes, links, nodeCounts) {
-    const sourceLinks = links.filter(link => link.source.name === node.name);
-    const targetLinks = links.filter(link => link.target.name === node.name);
+    const sourceLinks = links.filter(link => link.source === node);
+    const targetLinks = links.filter(link => link.target === node);
 
     const sourceNodes = sourceLinks.map(link => link.target);
     const targetNodes = targetLinks.map(link => link.source);
