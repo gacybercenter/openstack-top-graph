@@ -98,7 +98,7 @@ function drawNodes(nodesAndLinks, description) {
         'RouterInterface': "./assets/img/os__neutron__routerinterface.svg",
         'Server': "./assets/img/os__nova__server.svg",
         'Port': "./assets/img/os__neutron__port.svg",
-        'ServerPort': "./assets/img/os__nova__serverport.svg",
+        'Server_Port': "./assets/img/os__nova__serverport.svg",
         'FloatingIP': "./assets/img/os__neutron__floatingip.svg",
         'FloatingIPAssociation': "./assets/img/os__neutron__floatingipassociation.svg",
         'ResourceGroup': "./assets/img/os__heat__resourcegroup.svg",

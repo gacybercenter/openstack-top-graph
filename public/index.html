@@ -20,7 +20,7 @@
             <button id="hideLegend" class="button">Hide Legend</button>
             <button id="tooltips" class="button">Tooltips +</button>
             <button id="darkMode" class="button">Dark Mode</button>
-            <button id="mergePorts" class="button">Merge Ports</button>
+            <button id="mergeNodes" class="button">Merge Nodes</button>
         </div>
 
         <div class="file-input-container">
@@ -51,7 +51,7 @@
     const button5 = document.getElementById('hideLegend');
     const button6 = document.getElementById('tooltips');
     const button7 = document.getElementById('darkMode');
-    const button8 = document.getElementById('mergePorts');
+    const button8 = document.getElementById('mergeNodes');
 
     let locked = false;
     let subnet = false;
@@ -60,7 +60,7 @@
     let hideLegend = false;
     let tooltips = false;
     let darkMode = false;
-    let mergePorts = false;
+    let mergeNodes = false;
     let consoleOpen = false;
 
     const width = window.innerWidth;
@@ -80,7 +80,7 @@
         button5.classList.toggle('on', hideLegend);
         button6.classList.toggle('on', tooltips);
         button7.classList.toggle('on', darkMode);
-        button8.classList.toggle('on', mergePorts);
+        button8.classList.toggle('on', mergeNodes);
 
         document.body.style.backgroundColor = darkMode ? '#222222' : '#f5f5f5';
     }
@@ -121,7 +121,7 @@
     });
 
     button8.addEventListener('click', () => {
-        mergePorts = !mergePorts;
+        mergeNodes = !mergeNodes;
         updateButtons();
     })
 

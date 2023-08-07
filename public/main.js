@@ -25,11 +25,11 @@ import {
 } from "./modules/parseFunctions.js";
 
 const fileInput = document.getElementById("file-input");
-const mergePorts = document.getElementById("mergePorts");
+const mergeNodes = document.getElementById("mergeNodes");
 const textInput = document.getElementById("text-input");
 
 fileInput.addEventListener("change", handleFileSelect, false);
-mergePorts.addEventListener("click", recallHandleFileSelect, false);
+mergeNodes.addEventListener("click", recallHandleFileSelect, false);
 textInput.addEventListener("change", handleTextSelect, false);
 
 let lastEvent;

@@ -96,7 +96,7 @@ function nodeMap(parsedContent) {
      * @param {string} parentResourceName - The name of the parent resource to link.
      * @returns {Array} - The list of connected nodes.
      */
-    function getPortLinks(property, parentResourceName, nodes, amounts) {
+    function mergeNode(property, parentResourceName, nodes, amounts) {
         const portLinks = [];
 
         const action = (property, parentResourceName) => {
@@ -109,15 +109,14 @@ function nodeMap(parsedContent) {
                 let source = nodes.find(n => n.name === sourceName) ||
                     duplicateNodes.find(n => n.name === sourceName);
 
-                if (source && target && source.type === 'Port') {
-                    if (target.type === 'Server') {
-                        amounts['ServerPort'] = (amounts['ServerPort'] || 0) + 1;
-                        amounts['Server'] -= 1;
-                        amounts['Port'] -= 1;
-                        target.type = 'ServerPort';
-                        portLinks.push({ source, target });
-                    } else if (target.type === 'ServerPort') {
-                        amounts['Port'] -= 1;
+                if (source && target && mergeNodeTypes[source.type]) {
+                    let currentType = mergeNodeTypes[source.type];
+                    if (currentType === target.type) {
+                        let newType = `${currentType}_${source.type}`;
+                        amounts[newType] = (amounts[newType] || 0) + 1;
+                        amounts[source.type] -= 1;
+                        amounts[currentType] -= 1;
+                        target.type = newType;
                         portLinks.push({ source, target });
                     }
                 }
@@ -148,7 +147,7 @@ function nodeMap(parsedContent) {
                     duplicateNodes.find(n => n.name === sourceName);
 
                 if (source && target) {
-                    if (mergePorts && source.type === 'Port') {
+                    if (mergeNodes && mergeNodeTypes[source.type]) {
                         let newSource = portLinks.find(link => link.source === source);
                         if (newSource && newSource.target) {
                             source = newSource.target
@@ -157,7 +156,7 @@ function nodeMap(parsedContent) {
                     if (target.type === 'RouterInterface' && source.type === 'Subnet') {
                         target.data['fixed_ip'] = source.data['gateway_ip'];
                     }
-                    if (source.type !== 'Net' || (target.type !== 'Port' && target.type !== 'ServerPort')) {
+                    if (source.type !== 'Net' || !mergeNodeTypes[target.type]) {
                         links.push({ source, target });
                     }
                 }
@@ -174,12 +173,23 @@ function nodeMap(parsedContent) {
         }
     }
 
+    const mergeNodeTypes = {Port: 'Server',
+                            Server_Port: 'Server_Port'}
+
+    // const mergeNodeTypes = {Port: 'Server',
+    //                         FloatingIPAssociation: 'FloatingIP',
+    //                         RouterInterface: 'Router',
+    //                         SoftwareConfig: 'MultipartMime',
+    //                         Server_Port: 'Server_Port',
+    //                         FloatingIP_FloatingIPAssociation: 'FloatingIP_FloatingIPAssociation',
+    //                         Router_RouterInterface: 'Router_RouterInterface',
+    //                         MultipartMime_SoftwareConfig: 'MultipartMime_SoftwareConfig'};
     const portLinks = [];
 
-    if (mergePorts) {
+    if (mergeNodes) {
         for (const node of nodes) {
             if (node.data) {
-                portLinks.push(...getPortLinks(node.data, node.name, nodes, amounts));
+                portLinks.push(...mergeNode(node.data, node.name, nodes, amounts));
             }
         }
         for (const portLink of portLinks) {
