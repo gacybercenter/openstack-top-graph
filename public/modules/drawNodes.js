@@ -151,7 +151,7 @@ function drawNodes(nodesAndLinks, description) {
         .join('path')
         .attr('class', 'perimeter-path')
         .attr('fill', d => subnetColors[(d.index + 6) % subnetColors.length])
-        .attr('fill-opacity', 0.25);
+        .attr('fill-opacity', 0.1);
 
     /**
      * Draws a perimeter around the given subnet node and its linked nodes up to a given depth.
