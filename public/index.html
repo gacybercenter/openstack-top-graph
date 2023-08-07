@@ -121,11 +121,6 @@
     });
 
     button8.addEventListener('click', () => {
-        const svg = document.querySelector('svg');
-        const tooltip = document.querySelector('.tooltip');
-        if (svg) svg.remove();
-        if (tooltip) tooltip.remove();
-    
         mergePorts = !mergePorts;
         updateButtons();
     })

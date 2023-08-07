@@ -25,24 +25,28 @@ import {
 } from "./modules/parseFunctions.js";
 
 const fileInput = document.getElementById("file-input");
+const mergePorts = document.getElementById("mergePorts");
 const textInput = document.getElementById("text-input");
 
 fileInput.addEventListener("change", handleFileSelect, false);
+mergePorts.addEventListener("click", recallHandleFileSelect, false);
 textInput.addEventListener("change", handleTextSelect, false);
 
-function handleFileSelect(event) {
+let lastEvent;
+
 /**
  * Handles the file selection event.
  *
  * @param {Event} event - The file selection event.
  * @return {void} This function does not return anything.
  */
+function handleFileSelect(event) {
     let files = event.target.files;
     if (!files) return;
 
     clearSVG();
 
-    files = moveEnvFilesToFront(files)
+    files = moveEnvFilesToFront(files);
     let fileContent = {};
     readMultiFiles(files);
 
@@ -55,7 +59,7 @@ function handleFileSelect(event) {
     async function readMultiFiles(files) {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            const name = getTemplateName([file])
+            const name = getTemplateName([file]);
             let content = await readFileAsync(file);
 
             content = stackName(content, name);
@@ -63,8 +67,16 @@ function handleFileSelect(event) {
         }
         handleFileLoad(fileContent);
     }
+
+    lastEvent = event; // Store the current event as the last event
 }
 
+// Recall the function with the last event
+function recallHandleFileSelect() {
+    if (lastEvent) {
+        handleFileSelect(lastEvent);
+    }
+}
 
 /**
  * Handles the file load event.
