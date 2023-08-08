@@ -111,12 +111,15 @@ function nodeMap(parsedContent) {
 
                 if (source && target && mergeNodeTypes[source.type]) {
                     let currentType = mergeNodeTypes[source.type];
+                    let newType = `${currentType}_${source.type}`;
                     if (currentType === target.type) {
-                        let newType = `${currentType}_${source.type}`;
                         amounts[newType] = (amounts[newType] || 0) + 1;
                         amounts[source.type] -= 1;
                         amounts[currentType] -= 1;
                         target.type = newType;
+                        portLinks.push({ source, target });
+                    } else if (newType === target.type) {
+                        amounts[source.type] -= 1;
                         portLinks.push({ source, target });
                     }
                 }
@@ -147,14 +150,14 @@ function nodeMap(parsedContent) {
                     duplicateNodes.find(n => n.name === sourceName);
 
                 if (source && target) {
+                    if (target.type === 'RouterInterface' && source.type === 'Subnet') {
+                        target.data['fixed_ip'] = source.data['gateway_ip'];
+                    }
                     if (mergeNodes && mergeNodeTypes[source.type]) {
                         let newSource = portLinks.find(link => link.source === source);
                         if (newSource && newSource.target) {
                             source = newSource.target
                         }
-                    }
-                    if (target.type === 'RouterInterface' && source.type === 'Subnet') {
-                        target.data['fixed_ip'] = source.data['gateway_ip'];
                     }
                     if (source.type !== 'Net' || !mergeNodeTypes[target.type]) {
                         links.push({ source, target });
