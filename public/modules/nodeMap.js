@@ -169,8 +169,6 @@ function nodeMap(parsedContent) {
         traverseObject(property, action, parentResourceName);
     }
 
-    console.log(parsedContent);
-
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
         if (resource) createNode(resourceName, resource);
     }

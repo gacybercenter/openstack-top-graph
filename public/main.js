@@ -104,8 +104,6 @@ function handleTextSelect(event) {
     clearSVG();
     const parsedContent = parseInputText(inputText);
 
-    console.log(parsedContent);
-
     setConsoleHost(parsedContent.parameters);
     const file = { name: 'TEMPLATE' };
 
