@@ -74,7 +74,12 @@ function resolveIntrinsicFunctions(parsedContent) {
  * @return {object} The parsed object from the input text.
  */
 function parseInputText(inputText) {
-    return jsyaml.safeLoad(inputText) || JSON.parse(inputText);
+    try {
+        return jsyaml.safeLoad(inputText) || JSON.parse(inputText);
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+        return undefined;
+    }
 }
 
 /**

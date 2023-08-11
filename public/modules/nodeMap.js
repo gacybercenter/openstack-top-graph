@@ -169,15 +169,16 @@ function nodeMap(parsedContent) {
         traverseObject(property, action, parentResourceName);
     }
 
+    console.log(parsedContent);
 
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
-        if (resource !== undefined) {
-            createNode(resourceName, resource);
-        }
+        if (resource) createNode(resourceName, resource);
     }
 
-    const mergeNodeTypes = {Port: 'Server',
-                            Server_Port: 'Server_Port'}
+    const mergeNodeTypes = {
+        Port: 'Server',
+        Server_Port: 'Server_Port'
+    }
 
     // const mergeNodeTypes = {Port: 'Server',
     //                         FloatingIPAssociation: 'FloatingIP',
@@ -191,19 +192,15 @@ function nodeMap(parsedContent) {
 
     if (mergeNodes) {
         for (const node of nodes) {
-            if (node.data) {
-                portLinks.push(...mergeNode(node.data, node.name, nodes, amounts));
-            }
+            if (node.data) portLinks.push(...mergeNode(node.data, node.name, nodes, amounts));
         }
         for (const portLink of portLinks) {
             mergeContents(portLink.target, portLink.source);
         }
-    } 
+    }
 
     for (const node of nodes) {
-        if (node.data) {
-            getResource(node.data, node.name, nodes, amounts);
-        }
+        if (node.data) getResource(node.data, node.name, nodes, amounts);
     }
 
     nodes = nodes.filter(node => !portLinks.some(link => link.source === node));

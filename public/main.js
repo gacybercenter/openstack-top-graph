@@ -98,27 +98,26 @@ function handleFileLoad(fileContent) {
  * @param {object} event - The inputted JAML or JSON Heat Template text
  */
 function handleTextSelect(event) {
-    try {
-        const inputText = event.target.value;
-        if (!inputText) return;
+    const inputText = event.target.value;
+    if (!inputText) return;
 
-        clearSVG();
-        const parsedContent = parseInputText(inputText);
+    clearSVG();
+    const parsedContent = parseInputText(inputText);
 
-        setConsoleHost(parsedContent.parameters);
-        const file = { name: 'TEMPLATE' };
-        if (parsedContent.parameters) {
-            parsedContent.parameters['OS::stack_name'] = {
-                type: 'string',
-                default: file.name,
-            };
-        }
+    console.log(parsedContent);
 
-        const templateObj = resolveIntrinsicFunctions(parsedContent);
-        const nodesAndLinks = nodeMap(templateObj, file.name);
+    setConsoleHost(parsedContent.parameters);
+    const file = { name: 'TEMPLATE' };
 
-        drawNodes(nodesAndLinks, templateObj.description);
-    } catch (error) {
-        alert(`Error: ${error.message}`);
+    if (parsedContent.parameters) {
+        parsedContent.parameters['OS::stack_name'] = {
+            type: 'string',
+            default: file.name,
+        };
     }
+
+    resolveIntrinsicFunctions(parsedContent);
+    const nodesAndLinks = nodeMap(parsedContent);
+
+    drawNodes(nodesAndLinks, parsedContent.description);
 }
