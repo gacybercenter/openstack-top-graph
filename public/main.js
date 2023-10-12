@@ -25,12 +25,13 @@ import {
 } from "./modules/parseFunctions.js";
 
 const fileInput = document.getElementById("file-input");
-const mergeNodes = document.getElementById("mergeNodes");
 const textInput = document.getElementById("text-input");
+const mergeNodes = document.getElementById("mergeNodes");
 
 fileInput.addEventListener("change", handleFileSelect, false);
-mergeNodes.addEventListener("click", recallHandleFileSelect, false);
 textInput.addEventListener("change", handleTextSelect, false);
+mergeNodes.addEventListener("click", recallHandleFileSelect, false);
+mergeNodes.addEventListener("click", recallhandleTextSelect, false);
 
 let lastEvent;
 
@@ -118,4 +119,12 @@ function handleTextSelect(event) {
     const nodesAndLinks = nodeMap(parsedContent);
 
     drawNodes(nodesAndLinks, parsedContent.description);
+    
+    lastEvent = event; // Store the current event as the last event
+}
+
+function recallhandleTextSelect() {
+    if (lastEvent) {
+        handleTextSelect(lastEvent);
+    }
 }
