@@ -10,7 +10,7 @@
  * @returns {object} The modified parsedContent object.
  */
 function stackName(parsedContent, name, resources = parsedContent.resources) {
-    if (!parsedContent.resources) return parsedContent;
+    if (!resources || !parsedContent.resources) return parsedContent;
 
     for (const [key, value] of Object.entries(resources)) {
         if (isStackName(value)) {
@@ -38,7 +38,7 @@ function stackName(parsedContent, name, resources = parsedContent.resources) {
  * @returns {object} The modified parsedContent object.
  */
 function getParam(parsedContent, resources = parsedContent.resources, parameters = parsedContent.parameters) {
-    if (!parsedContent.resources) return parsedContent;
+    if (!resources || !parsedContent.resources) return parsedContent;
 
     for (const [key, value] of Object.entries(resources)) {
         if (isGetParam(value)) {
@@ -65,7 +65,7 @@ function getParam(parsedContent, resources = parsedContent.resources, parameters
  * @return {Object} The parsed content object with resolved IDs.
  */
 function resolveID(parsedContent, resources = parsedContent.resources, parameters = parsedContent.parameters) {
-    if (!parsedContent.resources) return parsedContent;
+    if (!resources || !parsedContent.resources) return parsedContent;
 
     for (const [key, value] of Object.entries(resources)) {
         if (isUUID(value)) {
@@ -90,7 +90,7 @@ function resolveID(parsedContent, resources = parsedContent.resources, parameter
  * @return {object} the parsed content object with the string templates replaced with their corresponding parameters
  */
 function strReplace(parsedContent, resources = parsedContent.resources) {
-    if (!parsedContent.resources) return parsedContent;
+    if (!resources || !parsedContent.resources) return parsedContent;
 
     for (const [key, value] of Object.entries(resources)) {
         if (isStrReplaceable(value)) {
@@ -116,7 +116,7 @@ function strReplace(parsedContent, resources = parsedContent.resources) {
  * @return {Object} the updated parsedContent object
  */
 function getFile(parsedContent, resources = parsedContent.resources) {
-    if (resources === undefined || !parsedContent.resources) return parsedContent;
+    if (!resources || !parsedContent.resources) return parsedContent;
 
     for (const [key, value] of Object.entries(resources)) {
         if (isGetFile(value)) {
@@ -147,7 +147,7 @@ function getFile(parsedContent, resources = parsedContent.resources) {
  * @return {Object} The parsed content with joined arrays.
  */
 function listJoin(parsedContent, resources = parsedContent.resources) {
-    if (!parsedContent.resources) return parsedContent;
+    if (!resources || !parsedContent.resources) return parsedContent;
 
     for (const [key, value] of Object.entries(resources)) {
         if (isListJoin(value)) {

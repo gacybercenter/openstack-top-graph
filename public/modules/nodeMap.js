@@ -76,6 +76,7 @@ function nodeMap(parsedContent) {
      * @param {string} parentResourceName - The name of the parent resource to pass to the action.
      */
     function traverseObject(object, action, parentResourceName) {
+        if (!object) return;
         if (Array.isArray(object)) {
             for (const element of object) {
                 traverseObject(element, action, parentResourceName);
