@@ -31,7 +31,7 @@ const mergeNodes = document.getElementById("mergeNodes");
 fileInput.addEventListener("change", handleFileSelect, false);
 textInput.addEventListener("change", handleTextSelect, false);
 mergeNodes.addEventListener("click", recallHandleFileSelect, false);
-mergeNodes.addEventListener("click", recallhandleTextSelect, false);
+mergeNodes.addEventListener("click", recallHandleTextSelect, false);
 
 let lastEvent;
 
@@ -123,7 +123,7 @@ function handleTextSelect(event) {
     lastEvent = event; // Store the current event as the last event
 }
 
-function recallhandleTextSelect() {
+function recallHandleTextSelect() {
     if (lastEvent) {
         handleTextSelect(lastEvent);
     }
