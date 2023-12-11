@@ -3,6 +3,8 @@
 This project provides a web app GUI for generating a topological graph of Heat Orchestration Templates.
 It can be used to dynamically manage associated network maps and provide an interactive topology.
 It recursively extracts the input data and formats it into a D3.js force simulation.
+Can handle multiple heat-templates at once is they are selected in the file upload menu.
+Note: Resources accross heat templates will link if {get_param : (resource)_id} is in the file
 
 The webpage uses [D3.js](https://d3js.org/) version 7 and [Cloudflare](https://cdnjs.cloudflare.com/)'s JSON and YAML parsing library version 3.14.1.
 
@@ -47,7 +49,9 @@ Or this:
 4. Panning
 5. Zooming
 6. Device Tooltips
-7. Toggleable Options
+7. Toggleable Buttons
+8. Charge and Size Sliders
+9. Multi-file Upload
 
 ### Options Buttons:
 - **Lock Nodes**<br>
@@ -65,6 +69,11 @@ Or this:
 - **Darkmode**<br>
    _Makes the background darker and text lighter_
 
+### Options Sliders:
+- **Charge**<br>
+   _Adjusts the interaction strenght between nodes_
+- **Size**<br>
+   _Adjusts the node icon and text size_
 ## Contributing
 
 [OpenStack Topology Graph Gitlab Repository](https://gitlab.com/gacybercenter/open/openstack-top-graph)

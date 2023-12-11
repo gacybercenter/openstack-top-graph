@@ -1,45 +1,204 @@
-function createDuplicateNodes(duplicateNode, nodes, links, amounts) {
-    
-    const targetNodes = links.filter(l => l.source.name === duplicateNode.name)             // Get the duplicate target nodes
-        .map(l => l.target);
-    const sourceNodes = links.filter(l => l.target.name === duplicateNode.name)             // Get the duplicate source nodes
-        .map(l => l.source);
+import {
+    parseFile,
+    getFileType
+} from "./utilityFunctions.js";
 
-    const uniqueSourceNodes = [...new Set([...sourceNodes])];                               // Get the unique source and target nodes
-    const uniqueTargetNodes = [...new Set([...targetNodes])];                               // Get the unique source and target nodes
+/**
+ * Moves the environment files to the front of the array.
+ *
+ * @param {Array} files - The array of files to be sorted.
+ * @return {Array} - The sorted array with environment files at the front.
+ */
+function moveEnvFilesToFront(files) {
+    const envFiles = [];
+    const otherFiles = [];
 
-    if (uniqueSourceNodes) {
-        if (uniqueSourceNodes.length > 0) {                                                 // If there is only one duplicate add it normally
-            for (const linkedNode of uniqueSourceNodes) {
-                const newNode = { ...duplicateNode };
-                nodes.push(newNode);
-                links.push({ source: linkedNode, target: newNode });
-            }
-            links.filter(l => l.source.name === duplicateNode.name)                         // Push the duplicate links
-                .forEach(l => links.splice(links.indexOf(l), 1));
-        } else if (uniqueSourceNodes[0]) {                                                  // If there is only one duplicate add it normally
-            const newNode = { ...sourceNodes };
-            nodes.push(newNode);
-            amounts[sourceNodes.type] = (amounts[sourceNodes.type] || 0) + 1;
+    for (const file of files) {
+        if (file.name.startsWith('env.')) {
+            envFiles.push(file);
+        } else {
+            otherFiles.push(file);
         }
     }
-    if (uniqueTargetNodes) {
-        if (uniqueTargetNodes.length > 0) {                                                 // If there are multiple duplicates add them uniquely
-            for (const linkedNode of uniqueTargetNodes) {
-                const newNode = { ...duplicateNode };
-                nodes.push(newNode);
-                links.push({ source: linkedNode, target: newNode });
+
+    return [...envFiles, ...otherFiles];
+}
+
+/**
+ * Asynchronously reads a file and returns its content.
+ *
+ * @param {File} file - The file to be read.
+ * @param {string} fileType - The type of the file.
+ * @return {Promise} A promise that resolves with the content of the file.
+ */
+function readFileAsync(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const fileType = getFileType(file.name);
+            const content = parseFile(fileType, event.target.result);
+            resolve(content);
+        };
+        reader.onerror = (event) => {
+            reject(new Error('Error reading file.'));
+        };
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+
+/**
+ * Merges the contents of the source object into the target object.
+ *
+ * @param {object} target - The target object to merge into.
+ * @param {object} source - The source object to merge from.
+ * @param {boolean} array - Whether to merge arrays or objects.
+ */
+function mergeContents(target, source, array = false) {
+    for (const key in source) {
+        if (source.hasOwnProperty(key)) {
+            const targetValue = target[key];
+            const sourceValue = source[key];
+
+            if (key === 'resources' && typeof targetValue === 'object' && typeof sourceValue === 'object') {
+                const sharedKey = Object.keys(targetValue).find(k => sourceValue.hasOwnProperty(k));
+                if (sharedKey) {
+                    alert(`Duplicate resource found: ${sharedKey}\n(This resource will be ignored!)`);
+                }
             }
-            links.filter(l => l.source.name === duplicateNode.name)                          // Push the duplicate links
-                .forEach(l => links.splice(links.indexOf(l), 1));
-        } else if (uniqueTargetNodes[0]) {                                                   // If there is only one duplicate add it normally
-            const newNode = { ...targetNodes };
-            nodes.push(newNode);
-            amounts[targetNodes.type] = (amounts[targetNodes.type] || 0) + 1;
+            if (targetValue === undefined) {
+                target[key] = sourceValue;
+            } else if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
+                target[key] = Array.from(new Set([...targetValue, ...sourceValue]));
+            } else if (typeof targetValue === 'object' && typeof sourceValue === 'object') {
+                mergeContents(targetValue, sourceValue);
+            }
+            if (array) {
+                if (Array.isArray(targetValue)) {
+                    target[key].push(sourceValue);
+                } else {
+                    target[key] = [targetValue, sourceValue];
+                }
+                target[key] = target[key].filter(item => item !== undefined);
+            }
         }
     }
 }
 
+/**
+ * Replaces any occurrence of "%index%" in a string or in an object's string values with the provided index,
+ * recursively replacing values in arrays and objects.
+ *
+ * @param {string|Array|object} obj - The object to replace the index in.
+ * @param {number} index - The index to replace.
+ * @return {string|Array|object} - The object with the updated index.
+ */
+function replaceIndex(obj, index) {
+    if (typeof obj === 'string') {
+        return obj.replace('%index%', index);
+    } else if (Array.isArray(obj)) {
+        return obj.map(item => replaceIndex(item, index));
+    } else if (typeof obj === 'object' && obj !== null) {
+        const newObj = {};
+        for (const [key, value] of Object.entries(obj)) {
+            newObj[key] = replaceIndex(value, index);
+        }
+        return newObj;
+    } else {
+        return obj;
+    }
+}
+
+/**
+ * Recursively formats an object into an array of values or an object of arrays.
+ *
+ * @param {object|array} obj - The object or array to be formatted.
+ * @param {string} [key=''] - The key of the current object in the parent object.
+ * @param {number} [indent=0] - The number of spaces to indent the formatted string.
+ * @param {string} [parentKey=''] - The key of the parent object.
+ * @param {object} [result={}] - The resulting object or array.
+ * @return {object} The formatted object or array.
+ */
+function formatObject(obj, key = '', indent = 0, parentKey = '', result = {}) {
+    let html = '';
+    if (Array.isArray(obj)) {
+        obj.forEach((value) => {
+            if (value !== '' && value !== '.') {
+                html += formatObject(value, key, indent + 2, parentKey, result);
+            }
+        });
+    } else if (typeof obj === 'object' && obj !== null) {
+        for (const [objKey, value] of Object.entries(obj)) {
+            const currentKey = objKey === 'get_resource' ? parentKey : objKey;
+            html += formatObject(value, currentKey, indent + 2, currentKey, result);
+        }
+    } else {
+        if (key && result[key] === undefined) {
+            result[key] = [];
+        }
+        if (key) {
+            result[key].push(obj);
+        }
+    }
+    return result;
+}
+
+/**
+ * Formats an object to an HTML string, returning both a short and long version. 
+ *
+ * @param {Object} result - The object to format.
+ * @return {Object} An object with two properties: short and long. Both are HTML strings.
+ */
+function formatObjectToHTML(result) {
+    const excluded = ['template', 'user_data_format', 'config', 'user_data', 'get_attr'];
+    let short = '';
+    let long = '';
+    for (const [resultKey, values] of Object.entries(result)) {
+      const uniqueValues = Array.from(new Set(values)); // Use a Set to store unique values
+      if (uniqueValues.length > 1) {
+        long += `<strong>${resultKey}: </strong>${uniqueValues.join(', ')}<br/>`;
+        if (excluded.indexOf(resultKey) === -1) {
+          short += `<strong>${resultKey}: </strong>${uniqueValues.join(', ')}<br/>`;
+        }
+      } else {
+        long += `<strong>${resultKey}: </strong>${uniqueValues[0]}<br/>`;
+        if (excluded.indexOf(resultKey) === -1) {
+          short += `<strong>${resultKey}: </strong>${uniqueValues[0]}<br/>`;
+        }
+      }
+    }
+    return { short, long };
+  }
+  
+
+/**
+ * Parses HTML and extracts IP address(es).
+ * It finds: ip_address, fixed_ip, and cidr.
+ * @param {string} html - The HTML to be parsed.
+ * @returns {string} - The IP address(es) in the HTML.
+ */
+function HTMLToIp(html) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const strongElements = doc.querySelectorAll('strong');
+    let ip = '';
+
+    for (const el of strongElements) {
+        if (el.textContent.includes('ip_address') ||
+            el.textContent.includes('fixed_ip') ||
+            el.textContent.includes('cidr')) {
+            ip = el.nextSibling.textContent.trim();
+        }
+    }
+    return ip;
+}
+
 export {
-    createDuplicateNodes
+    moveEnvFilesToFront,
+    readFileAsync,
+    mergeContents,
+    replaceIndex,
+    formatObject,
+    formatObjectToHTML,
+    HTMLToIp
 };

@@ -1,4 +1,4 @@
-heat_template_version: 2019-10-01
+heat_template_version: 2021-04-16
 description:
   Example Cyber Range template showcasing the various
   resource types that are supported
