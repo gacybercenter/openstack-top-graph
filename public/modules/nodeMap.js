@@ -16,6 +16,7 @@ import {
 function nodeMap(parsedContent) {
     const root = { name: "cloud", type: "Root" };                                       // Initialize the data structures.
     const amounts = { Root: 1 };
+<<<<<<< HEAD
     const resources = {
         vcpus: 0,
         ram: 0,
@@ -133,6 +134,8 @@ function nodeMap(parsedContent) {
             "disk": 128
         }
     }
+=======
+>>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
     let nodes = [root];
     let links = [];
     let duplicateNodes = [];
@@ -151,6 +154,7 @@ function nodeMap(parsedContent) {
         const node = { name, type, data };
         amounts[type] = (amounts[type] || 0) + 1;
         switch (type) {
+<<<<<<< HEAD
             case 'Server':
                 if (flavors.hasOwnProperty(data.flavor)) {
                     var vcpus = flavors[data.flavor].vcpus;
@@ -170,6 +174,8 @@ function nodeMap(parsedContent) {
                 }
                 nodes.push(node);
                 break;
+=======
+>>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
             case 'SecurityGroup':
             case 'SoftwareConfig':
             case 'RandomString':
@@ -352,7 +358,11 @@ function nodeMap(parsedContent) {
         node.weight = (50 + sourceNumber * 25 + targetNumber * 10) ** 0.5;
     }
 
+<<<<<<< HEAD
     return { nodes, links, amounts, resources, parameters: parsedContent.parameters };
+=======
+    return { nodes, links, amounts, parameters: parsedContent.parameters };
+>>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
 }
 
 export { nodeMap };
