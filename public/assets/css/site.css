@@ -4,7 +4,7 @@ body {
 
 .file-input-label {
     background-color: #c1d72e;
-    color: #000000;
+    color: #000;
     padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
@@ -16,37 +16,31 @@ body {
 }
 
 .buttons {
-    display: flex;
     align-items: center;
     justify-content: flex-start;
-    margin-top: 10px;
-    margin-bottom: 10px;
+    margin: 10px 0;
     background: none;
 }
 
 .button {
     background-color: #c1d72e;
-    color: #000000;
+    color: #000;
     border: none;
     border-radius: 10px;
-    margin-left: 5px;
-    margin-right: 5px;
+    margin: 0 5px;
     padding: 5px 10px;
     cursor: pointer;
 }
 
 .button.on {
     background-color: #dc582a;
-    color: #000000;
 }
 
 .svg {
-    width: 100%;
-    height: 100%;
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 0;
+    z-index: 1;
 }
 
 .container {
@@ -56,18 +50,15 @@ body {
 }
 
 .right-column {
-    flex-basis: calc(36%);
+    flex-basis: calc(30%);
 }
 
 .file-input-container {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    margin-top: 0px;
-    margin-bottom: 0px;
-    border-radius: 0px;
-    margin-left: 0px;
-    margin-right: 0px;
+    margin: 0;
+    border-radius: 0;
     padding: 5px 10px;
 }
 
@@ -79,17 +70,34 @@ body {
     padding: 5px 10px;
 }
 
+.info {
+    background-color: #ddd;
+    position: absolute;
+    overflow: auto;
+}
+
+iframe {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border: none;
+    z-index: 2;
+}
+
 .console-host {
     display: none;
     background-color: #c1d72e;
-    color: #000000;
+    color: #000;
     border: none;
-    border-radius: 10px;
-    margin-left: 5px;
-    margin-right: 5px;
+    border-radius: 0;
+    margin: 0 5px;
     padding: 5px 10px;
     cursor: pointer;
     bottom: 10px;
     right: 10px;
     position: absolute;
+    z-index: 3;
 }
