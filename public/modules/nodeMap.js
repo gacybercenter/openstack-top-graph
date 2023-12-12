@@ -47,6 +47,16 @@ function nodeMap(parsedContent) {
             "ram": 16,
             "disk": 256
         },
+        "d1.xlarge.cpu": {
+            "vcpus": 16,
+            "ram": 16,
+            "disk": 256
+        },
+        "so.sensor": {
+            "vcpus": 4,
+            "ram": 12,
+            "disk": 150
+        },
         "r1.nano": {
             "vcpus": 1,
             "ram": 2,
@@ -155,6 +165,8 @@ function nodeMap(parsedContent) {
                     resources.disk += disk;
                 } else {
                     data.flavor = `${data.flavor} (Unknown)`;
+                    alert(`Unknown flavor: ${data.flavor}`);
+                    console.log(`Unknown flavor: ${data.flavor}`);
                 }
                 nodes.push(node);
                 break;
