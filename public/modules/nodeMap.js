@@ -146,7 +146,7 @@ function nodeMap(parsedContent) {
                     var vcpus = flavors[data.flavor].vcpus;
                     var ram = flavors[data.flavor].ram;
                     var disk = flavors[data.flavor].disk;
-                    var resourcesText = `vCPUs: ${vcpus} Cores | RAM: ${ram} GB | Disk: ${disk} GB`;
+                    var resourcesText = `vCPUs: ${vcpus} | RAM: ${ram} GB | Disk: ${disk} GB`;
 
                     data.flavor = `${data.flavor} (${resourcesText})`;
 

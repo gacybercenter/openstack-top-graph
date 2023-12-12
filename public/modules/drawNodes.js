@@ -298,7 +298,7 @@ function drawNodes(nodesAndLinks, description) {
         .style("font-size", "16px")
         .style("fill", "#222");
 
-    const resourcesText = `vCPUs: ${resources.vcpus} Cores | RAM: ${resources.ram} GB | Disk: ${resources.disk} GB`;
+    const resourcesText = `vCPUs: ${resources.vcpus} | RAM: ${resources.ram} GB | Disk: ${resources.disk} GB`;
       
     legend.append("text")
         .text(resourcesText)
