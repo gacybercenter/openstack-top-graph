@@ -1,1 +1,11 @@
+<<<<<<< HEAD
 node_modules
+=======
+logs/*
+!.gitkeep
+node_modules/
+bower_components/
+tmp
+.DS_Store
+.idea
+>>>>>>> ba13058 (chore: Added some of the necissary files)

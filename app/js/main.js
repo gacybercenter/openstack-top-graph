@@ -4,25 +4,25 @@ import {
     resolveIntrinsicFunctions,
     parseInputText,
     setConsoleHost
-} from "./modules/utilityFunctions.js";
+} from "./utilityFunctions.js";
 
 import {
     nodeMap
-} from "./modules/nodeMap.js";
+} from "./nodeMap.js";
 
 import {
     drawNodes
-} from "./modules/drawNodes.js";
+} from "./drawNodes.js";
 
 import {
     stackName
-} from "./modules/hotFunctions.js";
+} from "./hotFunctions.js";
 
 import {
     moveEnvFilesToFront,
     readFileAsync,
     mergeContents
-} from "./modules/parseFunctions.js";
+} from "./parseFunctions.js";
 
 const fileInput = document.getElementById("file-input");
 const textInput = document.getElementById("text-input");
