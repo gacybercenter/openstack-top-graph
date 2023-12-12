@@ -1,11 +1,18 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 node_modules
 =======
+=======
+>>>>>>> 78c1ec1 (chore: Added some of the necissary files)
 logs/*
 !.gitkeep
 node_modules/
 bower_components/
 tmp
 .DS_Store
+<<<<<<< HEAD
 .idea
 >>>>>>> ba13058 (chore: Added some of the necissary files)
+=======
+.idea
+>>>>>>> 78c1ec1 (chore: Added some of the necissary files)
