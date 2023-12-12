@@ -11,7 +11,7 @@
 </head>
 
 <body>
-    <div class="container">
+    <div class="options">
         <div class="buttons">
             <button id="locked" class="button">Lock Nodes</button>
             <button id="subnet" class="button">Show Subnets</button>
@@ -26,12 +26,7 @@
         <div class="file-input-container">
             <label for="file-input" class="file-input-label">Select File</label>
             <input type="file" id="file-input" class="file-input" multiple>
-        </div>
-
-        <div class="right-column">
-            <div class="text-input">
-                <textarea id="text-input" class="text-input" spellcheck="false"></textarea>
-            </div>
+            <textarea id="text-input" class="text-input" spellcheck="false"></textarea>
         </div>
 
         <iframe id="console_host_iframe" class="iframe" style="display: none;"></iframe>
@@ -39,6 +34,7 @@
             <button id="console_host_button" class="console-host">Toggle Range</button>
         </a>
     </div>
+    <div class="topology" id="topology"></div>
 </body>
 
 <script type="module" src="./main.js"></script>

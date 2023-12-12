@@ -16,11 +16,11 @@ function drawNodes(nodesAndLinks, description) {
     const nodes = nodesAndLinks.nodes;                                                  // Separates the nodes from the input
     const links = nodesAndLinks.links;                                                  // Separates the links from the input
     const amounts = nodesAndLinks.amounts                                               // Separates the amounts from the input
+    const resources = nodesAndLinks.resources;                                          // Separates the resources from the input
 
     const width = window.innerWidth                                                     // Stores the window width
-    const height = window.innerHeight                                                   // Stores the window height
-    var container = document.getElementsByClassName('container')[0];
-    var heightOffset = container.offsetHeight;
+    const height = window.innerHeight - 60;                                                   // Stores the window height
+    const topology = document.getElementById('topology');
 
     const parameters = nodesAndLinks.parameters;                                        // Separates the heat template information from the input
     for (var node of nodes) {
@@ -134,10 +134,10 @@ function drawNodes(nodesAndLinks, description) {
         .scaleExtent([0.1, 5])
         .on('zoom', zoomed);
 
-    const svg = d3.select('body')                                                       // Define the main svg body for the topology
+    const svg = d3.select(topology)                                                       // Define the main svg body for the topology
         .append('svg')
         .attr('width', width * 0.98)
-        .attr('height', (height - heightOffset) * 0.95)
+        .attr('height', height * 0.95)
         .attr("cursor", "crosshair")
         .call(zoom);
 
@@ -273,9 +273,9 @@ function drawNodes(nodesAndLinks, description) {
         .style('text-align', 'left')
         .style('word-wrap', 'break-word');
 
-    const legend = svg.append("g")                                                  // Define the legend
+    const legend = svg.append("g")
         .attr("class", "legend")
-        .attr("transform", "translate(10, 45)")
+        .attr("transform", "translate(10, 20)")
         .style('visibility', 'visible');
 
     legend.selectAll("rect")                                                        // Add colors to the legend
@@ -283,7 +283,7 @@ function drawNodes(nodesAndLinks, description) {
         .enter()
         .append("rect")
         .attr("x", 0)
-        .attr("y", (d, i) => i * 30 + 50)                                           // Adjusted y-coordinate to make room for the title
+        .attr("y", (d, i) => i * 30 + 20)                                           // Adjusted y-coordinate to make room for the title
         .attr("width", 20)
         .attr("height", 20)
         .attr("fill", d => d.color);
@@ -293,31 +293,33 @@ function drawNodes(nodesAndLinks, description) {
         .enter()
         .append("text")
         .attr("x", 30)
-        .attr("y", (d, i) => i * 30 + 65)                                           // Adjusted y-coordinate to make room for the title
+        .attr("y", (d, i) => i * 30 + 35)                                           // Adjusted y-coordinate to make room for the title
         .text(d => `${d.type} (${d.count})`)
         .style("font-size", "16px")
         .style("fill", "#222");
 
-    legend.append('text')                                                           // Define the title
-        .text('Legend')
+    const resourcesText = `vCPUs: ${resources.vcpus} Cores | RAM: ${resources.ram} GB | Disk: ${resources.disk} GB`;
+      
+    legend.append("text")
+        .text(resourcesText)
         .attr('fill', 'black')
         .attr('text-anchor', 'left')
         .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', "24px")
+        .style('font-size', "16px")
         .attr('textLength', function () {
             const length = this.getComputedTextLength();
-            return length > window.innerWidth ? window.innerWidth / 4 : length;
+            return length > width ? width / 4 : length;
         })
         .attr('lengthAdjust', 'spacingAndGlyphs')
         .attr('title', 'Legend')
         .attr('x', 0)
-        .attr('y', 30);                                                             // Modified line to adjust y-coordinate of the title
+        .attr('y', 0);
 
     const info = svg.append("foreignObject")
         .attr("class", "info")
-        .attr("x", width * (1 - 0.4))
+        .attr("x", width * 0.6)
         .attr("y", 0)
-        .attr("width", window.innerWidth / 3 + 50)
+        .attr("width", width / 3 + 50)
         .attr("height", "100%")
         .style("position", "absolute")
         .style("overflow-x", "scroll")
@@ -332,7 +334,6 @@ function drawNodes(nodesAndLinks, description) {
 
     const button = div.append("button")
         .text("Copy")
-        .style("margin-bottom", "8px")
         .on("click", () => {
             const copyText = jsyaml.dump(parameters);
             navigator.clipboard.writeText(copyText)
@@ -395,11 +396,8 @@ function drawNodes(nodesAndLinks, description) {
      * elements based on different states.
      */
     function update() {
-        const svgWidth = (window.innerWidth) * 0.98;
-        const svgHeight = (window.innerHeight - heightOffset) * 0.95;
-
-        svg.attr("width", svgWidth)
-            .attr("height", svgHeight);
+        svg.attr("width", window.innerWidth * 0.98)
+            .attr("height", window.innerHeight * 0.98 - 60);
 
         nodesGroup.attr("cx", d => d.x)
             .attr("cy", d => d.y);
@@ -427,14 +425,12 @@ function drawNodes(nodesAndLinks, description) {
             subnetGroups.each(function (d) {
                 drawPerimeter(d);
             });
-            if (force) {
-                force.alphaTarget(0.1).restart();
-            }
         } else {
             perimeterPaths.attr("d", "");
-            if (force) {
-                force.alphaTarget(0.1).restart();
-            }
+        }
+
+        if (force) {
+            force.alphaTarget(0.01).restart();
         }
 
         info.style("visibility", showInfo ? "visible" : "hidden");
@@ -465,7 +461,7 @@ function drawNodes(nodesAndLinks, description) {
      * @return {Object} - the drag object that chooses the drag phase.
      */
     function drag(simulation) {                                                     // Manages the drag actions, called by nodes
-        let x, y, dx, dy;
+        let x, y, dx, dy = 0;
 
         /**
          * Manages the beginning of a drag.
