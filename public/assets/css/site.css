@@ -43,7 +43,7 @@ body {
     z-index: 1;
 }
 
-.container {
+.options {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -55,19 +55,17 @@ body {
 
 .file-input-container {
     display: flex;
-    align-items: center;
+    align-items: top;
     justify-content: flex-start;
-    margin: 0;
-    border-radius: 0;
     padding: 5px 10px;
+    height: 40px; /* Adjust the height as needed */
+    z-index: 2;
 }
 
-.text-input {
-    position: absolute;
-    display: flex;
-    justify-content: flex-start;
-    border-radius: 10px;
-    padding: 5px 10px;
+.topology {
+    display: block;
+    align-items: center;
+    /* padding: 5px 10px; */
 }
 
 .info {

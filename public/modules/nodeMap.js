@@ -16,6 +16,123 @@ import {
 function nodeMap(parsedContent) {
     const root = { name: "cloud", type: "Root" };                                       // Initialize the data structures.
     const amounts = { Root: 1 };
+    const resources = {
+        vcpus: 0,
+        ram: 0,
+        disk: 0
+    };
+    const flavors = {
+        "d1.nano": {
+            "vcpus": 1,
+            "ram": 1,
+            "disk": 16
+        },
+        "d1.small": {
+            "vcpus": 1,
+            "ram": 2,
+            "disk": 32
+        },
+        "d1.medium": {
+            "vcpus": 2,
+            "ram": 4,
+            "disk": 64
+        },
+        "d1.large": {
+            "vcpus": 2,
+            "ram": 8,
+            "disk": 128
+        },
+        "d1.xlarge": {
+            "vcpus": 4,
+            "ram": 16,
+            "disk": 256
+        },
+        "d1.xlarge.cpu": {
+            "vcpus": 16,
+            "ram": 16,
+            "disk": 256
+        },
+        "so.sensor": {
+            "vcpus": 4,
+            "ram": 12,
+            "disk": 150
+        },
+        "r1.nano": {
+            "vcpus": 1,
+            "ram": 2,
+            "disk": 8
+        },
+        "r1.small": {
+            "vcpus": 2,
+            "ram": 4,
+            "disk": 16
+        },
+        "r1.medium": {
+            "vcpus": 2,
+            "ram": 8,
+            "disk": 32
+        },
+        "r1.large": {
+            "vcpus": 2,
+            "ram": 16,
+            "disk": 64
+        },
+        "r1.xlarge": {
+            "vcpus": 8,
+            "ram": 32,
+            "disk": 128
+        },
+        "c1.nano": {
+            "vcpus": 2,
+            "ram": 1,
+            "disk": 8
+        },
+        "c1.small": {
+            "vcpus": 4,
+            "ram": 2,
+            "disk": 16
+        },
+        "c1.medium": {
+            "vcpus": 8,
+            "ram": 4,
+            "disk": 32
+        },
+        "c1.large": {
+            "vcpus": 16,
+            "ram": 8,
+            "disk": 64
+        },
+        "c1.xlarge": {
+            "vcpus": 32,
+            "ram": 16,
+            "disk": 128
+        },
+        "m1.nano": {
+            "vcpus": 1,
+            "ram": 2,
+            "disk": 16
+        },
+        "m1.small": {
+            "vcpus": 2,
+            "ram": 4,
+            "disk": 32
+        },
+        "m1.medium": {
+            "vcpus": 4,
+            "ram": 8,
+            "disk": 64
+        },
+        "m1.large": {
+            "vcpus": 6,
+            "ram": 12,
+            "disk": 64
+        },
+        "m1.xlarge": {
+            "vcpus": 8,
+            "ram": 16,
+            "disk": 128
+        }
+    }
     let nodes = [root];
     let links = [];
     let duplicateNodes = [];
@@ -34,6 +151,25 @@ function nodeMap(parsedContent) {
         const node = { name, type, data };
         amounts[type] = (amounts[type] || 0) + 1;
         switch (type) {
+            case 'Server':
+                if (flavors.hasOwnProperty(data.flavor)) {
+                    var vcpus = flavors[data.flavor].vcpus;
+                    var ram = flavors[data.flavor].ram;
+                    var disk = flavors[data.flavor].disk;
+                    var resourcesText = `vCPUs: ${vcpus} | RAM: ${ram} GB | Disk: ${disk} GB`;
+
+                    data.flavor = `${data.flavor} (${resourcesText})`;
+
+                    resources.vcpus += vcpus;
+                    resources.ram += ram;
+                    resources.disk += disk;
+                } else {
+                    data.flavor = `${data.flavor} (Unknown)`;
+                    alert(`Unknown flavor: ${data.flavor}`);
+                    console.log(`Unknown flavor: ${data.flavor}`);
+                }
+                nodes.push(node);
+                break;
             case 'SecurityGroup':
             case 'SoftwareConfig':
             case 'RandomString':
@@ -216,7 +352,7 @@ function nodeMap(parsedContent) {
         node.weight = (50 + sourceNumber * 25 + targetNumber * 10) ** 0.5;
     }
 
-    return { nodes, links, amounts, parameters: parsedContent.parameters };
+    return { nodes, links, amounts, resources, parameters: parsedContent.parameters };
 }
 
 export { nodeMap };
