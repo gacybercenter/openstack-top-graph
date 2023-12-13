@@ -99,27 +99,27 @@ function drawNodes(nodesAndLinks, description) {
     ];
 
     const pictures = {                                                                  // Assign each node type an icon
-        'Root': "../img/favicon.ico",
-        'Net': "../img/os__neutron__net.svg",
-        'Subnet': "../img/os__neutron__subnet.svg",
-        'Router': "../img/os__neutron__router.svg",
-        'RouterInterface': "../img/os__neutron__routerinterface.svg",
-        'Server': "../img/os__nova__server.svg",
-        'Port': "../img/os__neutron__port.svg",
-        'Server_Port': "../img/os__nova__serverport.svg",
-        'FloatingIP': "../img/os__neutron__floatingip.svg",
-        'FloatingIPAssociation': "../img/os__neutron__floatingipassociation.svg",
-        'ResourceGroup': "../img/os__heat__resourcegroup.svg",
-        'SecurityGroup': "../img/os__neutron__securitygroup.svg",
-        'ExtraRoute': "../img/extraroute.svg",
-        'WaitCondition': "../img/waitcondition.svg",
-        'WaitConditionHandle': "../img/waitconditionhandle.svg",
-        'MultipartMime': "../img/multipartmime.svg",
-        'SoftwareConfig': "../img/softwareconfig.svg",
-        'RandomString': "../img/randomstring.svg",
-        'RecordSet': "../img/recordset.svg",
-        'Zone': "../img/zone.svg",
-        'Other': "../img/question__mark.png"
+        'Root': "./img/favicon.ico",
+        'Net': "./img/os__neutron__net.svg",
+        'Subnet': "./img/os__neutron__subnet.svg",
+        'Router': "./img/os__neutron__router.svg",
+        'RouterInterface': "./img/os__neutron__routerinterface.svg",
+        'Server': "./img/os__nova__server.svg",
+        'Port': "./img/os__neutron__port.svg",
+        'Server_Port': "./img/os__nova__serverport.svg",
+        'FloatingIP': "./img/os__neutron__floatingip.svg",
+        'FloatingIPAssociation': "./img/os__neutron__floatingipassociation.svg",
+        'ResourceGroup': "./img/os__heat__resourcegroup.svg",
+        'SecurityGroup': "./img/os__neutron__securitygroup.svg",
+        'ExtraRoute': "./img/extraroute.svg",
+        'WaitCondition': "./img/waitcondition.svg",
+        'WaitConditionHandle': "./img/waitconditionhandle.svg",
+        'MultipartMime': "./img/multipartmime.svg",
+        'SoftwareConfig': "./img/softwareconfig.svg",
+        'RandomString': "./img/randomstring.svg",
+        'RecordSet': "./img/recordset.svg",
+        'Zone': "./img/zone.svg",
+        'Other': "./img/question__mark.png"
     }
 
     const chargeMultiplier = -150;
