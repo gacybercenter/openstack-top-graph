@@ -430,7 +430,7 @@ function drawNodes(nodesAndLinks, description) {
         }
 
         if (force) {
-            force.alphaTarget(0.01).restart();
+            force.alphaTarget(0.05).restart();
         }
 
         info.style("visibility", showInfo ? "visible" : "hidden");
@@ -470,7 +470,7 @@ function drawNodes(nodesAndLinks, description) {
          * @return {undefined} this function does not return anything
          */
         function dragstarted(event) {                                               // Manages the begining of a drag
-            if (!event.active) simulation.alphaTarget(0.3).restart();
+            if (!event.active) simulation.alphaTarget(0.1).restart();
 
             x = event.subject.x;
             y = event.subject.y;
