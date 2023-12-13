@@ -91,27 +91,27 @@ function drawNodes(nodesAndLinks, description) {
     ];
 
     const pictures = {                                                                  // Assign each node type an icon
-        'Root': "./assets/img/favicon.ico",
-        'Net': "./assets/img/os__neutron__net.svg",
-        'Subnet': "./assets/img/os__neutron__subnet.svg",
-        'Router': "./assets/img/os__neutron__router.svg",
-        'RouterInterface': "./assets/img/os__neutron__routerinterface.svg",
-        'Server': "./assets/img/os__nova__server.svg",
-        'Port': "./assets/img/os__neutron__port.svg",
-        'Server_Port': "./assets/img/os__nova__serverport.svg",
-        'FloatingIP': "./assets/img/os__neutron__floatingip.svg",
-        'FloatingIPAssociation': "./assets/img/os__neutron__floatingipassociation.svg",
-        'ResourceGroup': "./assets/img/os__heat__resourcegroup.svg",
-        'SecurityGroup': "./assets/img/os__neutron__securitygroup.svg",
-        'ExtraRoute': "./assets/img/extraroute.svg",
-        'WaitCondition': "./assets/img/waitcondition.svg",
-        'WaitConditionHandle': "./assets/img/waitconditionhandle.svg",
-        'MultipartMime': "./assets/img/multipartmime.svg",
-        'SoftwareConfig': "./assets/img/softwareconfig.svg",
-        'RandomString': "./assets/img/randomstring.svg",
-        'RecordSet': "./assets/img/recordset.svg",
-        'Zone': "./assets/img/zone.svg",
-        'Other': "./assets/img/question__mark.png"
+        'Root': "../img/favicon.ico",
+        'Net': "../img/os__neutron__net.svg",
+        'Subnet': "../img/os__neutron__subnet.svg",
+        'Router': "../img/os__neutron__router.svg",
+        'RouterInterface': "../img/os__neutron__routerinterface.svg",
+        'Server': "../img/os__nova__server.svg",
+        'Port': "../img/os__neutron__port.svg",
+        'Server_Port': "../img/os__nova__serverport.svg",
+        'FloatingIP': "../img/os__neutron__floatingip.svg",
+        'FloatingIPAssociation': "../img/os__neutron__floatingipassociation.svg",
+        'ResourceGroup': "../img/os__heat__resourcegroup.svg",
+        'SecurityGroup': "../img/os__neutron__securitygroup.svg",
+        'ExtraRoute': "../img/extraroute.svg",
+        'WaitCondition': "../img/waitcondition.svg",
+        'WaitConditionHandle': "../img/waitconditionhandle.svg",
+        'MultipartMime': "../img/multipartmime.svg",
+        'SoftwareConfig': "../img/softwareconfig.svg",
+        'RandomString': "../img/randomstring.svg",
+        'RecordSet': "../img/recordset.svg",
+        'Zone': "../img/zone.svg",
+        'Other': "../img/question__mark.png"
     }
 
     const chargeMultiplier = -150;
