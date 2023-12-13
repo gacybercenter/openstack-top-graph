@@ -57,11 +57,6 @@ body {
     display: flex;
     align-items: top;
     justify-content: flex-start;
-<<<<<<< HEAD
-=======
-    margin: 0;
-    border-radius: 0;
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
     padding: 5px 10px;
     height: 40px; /* Adjust the height as needed */
     z-index: 2;

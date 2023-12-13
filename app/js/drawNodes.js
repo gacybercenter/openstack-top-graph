@@ -16,19 +16,11 @@ function drawNodes(nodesAndLinks, description) {
     const nodes = nodesAndLinks.nodes;                                                  // Separates the nodes from the input
     const links = nodesAndLinks.links;                                                  // Separates the links from the input
     const amounts = nodesAndLinks.amounts                                               // Separates the amounts from the input
-<<<<<<< HEAD
     const resources = nodesAndLinks.resources;                                          // Separates the resources from the input
 
     const width = window.innerWidth                                                     // Stores the window width
     const height = window.innerHeight - 60;                                                   // Stores the window height
     const topology = document.getElementById('topology');
-=======
-
-    const width = window.innerWidth                                                     // Stores the window width
-    const height = window.innerHeight                                                   // Stores the window height
-    var container = document.getElementsByClassName('container')[0];
-    var heightOffset = container.offsetHeight;
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
 
     const parameters = nodesAndLinks.parameters;                                        // Separates the heat template information from the input
     for (var node of nodes) {
@@ -99,27 +91,27 @@ function drawNodes(nodesAndLinks, description) {
     ];
 
     const pictures = {                                                                  // Assign each node type an icon
-        'Root': "./assets/img/favicon.ico",
-        'Net': "./assets/img/os__neutron__net.svg",
-        'Subnet': "./assets/img/os__neutron__subnet.svg",
-        'Router': "./assets/img/os__neutron__router.svg",
-        'RouterInterface': "./assets/img/os__neutron__routerinterface.svg",
-        'Server': "./assets/img/os__nova__server.svg",
-        'Port': "./assets/img/os__neutron__port.svg",
-        'Server_Port': "./assets/img/os__nova__serverport.svg",
-        'FloatingIP': "./assets/img/os__neutron__floatingip.svg",
-        'FloatingIPAssociation': "./assets/img/os__neutron__floatingipassociation.svg",
-        'ResourceGroup': "./assets/img/os__heat__resourcegroup.svg",
-        'SecurityGroup': "./assets/img/os__neutron__securitygroup.svg",
-        'ExtraRoute': "./assets/img/extraroute.svg",
-        'WaitCondition': "./assets/img/waitcondition.svg",
-        'WaitConditionHandle': "./assets/img/waitconditionhandle.svg",
-        'MultipartMime': "./assets/img/multipartmime.svg",
-        'SoftwareConfig': "./assets/img/softwareconfig.svg",
-        'RandomString': "./assets/img/randomstring.svg",
-        'RecordSet': "./assets/img/recordset.svg",
-        'Zone': "./assets/img/zone.svg",
-        'Other': "./assets/img/question__mark.png"
+        'Root': "./img/favicon.ico",
+        'Net': "./img/os__neutron__net.svg",
+        'Subnet': "./img/os__neutron__subnet.svg",
+        'Router': "./img/os__neutron__router.svg",
+        'RouterInterface': "./img/os__neutron__routerinterface.svg",
+        'Server': "./img/os__nova__server.svg",
+        'Port': "./img/os__neutron__port.svg",
+        'Server_Port': "./img/os__nova__serverport.svg",
+        'FloatingIP': "./img/os__neutron__floatingip.svg",
+        'FloatingIPAssociation': "./img/os__neutron__floatingipassociation.svg",
+        'ResourceGroup': "./img/os__heat__resourcegroup.svg",
+        'SecurityGroup': "./img/os__neutron__securitygroup.svg",
+        'ExtraRoute': "./img/extraroute.svg",
+        'WaitCondition': "./img/waitcondition.svg",
+        'WaitConditionHandle': "./img/waitconditionhandle.svg",
+        'MultipartMime': "./img/multipartmime.svg",
+        'SoftwareConfig': "./img/softwareconfig.svg",
+        'RandomString': "./img/randomstring.svg",
+        'RecordSet': "./img/recordset.svg",
+        'Zone': "./img/zone.svg",
+        'Other': "./img/question__mark.png"
     }
 
     const chargeMultiplier = -150;
@@ -142,17 +134,10 @@ function drawNodes(nodesAndLinks, description) {
         .scaleExtent([0.1, 5])
         .on('zoom', zoomed);
 
-<<<<<<< HEAD
     const svg = d3.select(topology)                                                       // Define the main svg body for the topology
         .append('svg')
         .attr('width', width * 0.98)
         .attr('height', height * 0.95)
-=======
-    const svg = d3.select('body')                                                       // Define the main svg body for the topology
-        .append('svg')
-        .attr('width', width * 0.98)
-        .attr('height', (height - heightOffset) * 0.95)
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
         .attr("cursor", "crosshair")
         .call(zoom);
 
@@ -288,15 +273,9 @@ function drawNodes(nodesAndLinks, description) {
         .style('text-align', 'left')
         .style('word-wrap', 'break-word');
 
-<<<<<<< HEAD
     const legend = svg.append("g")
         .attr("class", "legend")
         .attr("transform", "translate(10, 20)")
-=======
-    const legend = svg.append("g")                                                  // Define the legend
-        .attr("class", "legend")
-        .attr("transform", "translate(10, 45)")
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
         .style('visibility', 'visible');
 
     legend.selectAll("rect")                                                        // Add colors to the legend
@@ -304,11 +283,7 @@ function drawNodes(nodesAndLinks, description) {
         .enter()
         .append("rect")
         .attr("x", 0)
-<<<<<<< HEAD
         .attr("y", (d, i) => i * 30 + 20)                                           // Adjusted y-coordinate to make room for the title
-=======
-        .attr("y", (d, i) => i * 30 + 50)                                           // Adjusted y-coordinate to make room for the title
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
         .attr("width", 20)
         .attr("height", 20)
         .attr("fill", d => d.color);
@@ -318,16 +293,11 @@ function drawNodes(nodesAndLinks, description) {
         .enter()
         .append("text")
         .attr("x", 30)
-<<<<<<< HEAD
         .attr("y", (d, i) => i * 30 + 35)                                           // Adjusted y-coordinate to make room for the title
-=======
-        .attr("y", (d, i) => i * 30 + 65)                                           // Adjusted y-coordinate to make room for the title
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
         .text(d => `${d.type} (${d.count})`)
         .style("font-size", "16px")
         .style("fill", "#222");
 
-<<<<<<< HEAD
     const resourcesText = `vCPUs: ${resources.vcpus} | RAM: ${resources.ram} GB | Disk: ${resources.disk} GB`;
       
     legend.append("text")
@@ -339,22 +309,10 @@ function drawNodes(nodesAndLinks, description) {
         .attr('textLength', function () {
             const length = this.getComputedTextLength();
             return length > width ? width / 4 : length;
-=======
-    legend.append('text')                                                           // Define the title
-        .text('Legend')
-        .attr('fill', 'black')
-        .attr('text-anchor', 'left')
-        .style('font-family', "Verdana, Helvetica, Sans-Serif")
-        .style('font-size', "24px")
-        .attr('textLength', function () {
-            const length = this.getComputedTextLength();
-            return length > window.innerWidth ? window.innerWidth / 4 : length;
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
         })
         .attr('lengthAdjust', 'spacingAndGlyphs')
         .attr('title', 'Legend')
         .attr('x', 0)
-<<<<<<< HEAD
         .attr('y', 0);
 
     const info = svg.append("foreignObject")
@@ -362,15 +320,6 @@ function drawNodes(nodesAndLinks, description) {
         .attr("x", width * 0.6)
         .attr("y", 0)
         .attr("width", width / 3 + 50)
-=======
-        .attr('y', 30);                                                             // Modified line to adjust y-coordinate of the title
-
-    const info = svg.append("foreignObject")
-        .attr("class", "info")
-        .attr("x", width * (1 - 0.4))
-        .attr("y", 0)
-        .attr("width", window.innerWidth / 3 + 50)
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
         .attr("height", "100%")
         .style("position", "absolute")
         .style("overflow-x", "scroll")
@@ -385,10 +334,6 @@ function drawNodes(nodesAndLinks, description) {
 
     const button = div.append("button")
         .text("Copy")
-<<<<<<< HEAD
-=======
-        .style("margin-bottom", "8px")
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
         .on("click", () => {
             const copyText = jsyaml.dump(parameters);
             navigator.clipboard.writeText(copyText)
@@ -451,16 +396,8 @@ function drawNodes(nodesAndLinks, description) {
      * elements based on different states.
      */
     function update() {
-<<<<<<< HEAD
         svg.attr("width", window.innerWidth * 0.98)
             .attr("height", window.innerHeight * 0.98 - 60);
-=======
-        const svgWidth = (window.innerWidth) * 0.98;
-        const svgHeight = (window.innerHeight - heightOffset) * 0.95;
-
-        svg.attr("width", svgWidth)
-            .attr("height", svgHeight);
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
 
         nodesGroup.attr("cx", d => d.x)
             .attr("cy", d => d.y);
@@ -488,23 +425,12 @@ function drawNodes(nodesAndLinks, description) {
             subnetGroups.each(function (d) {
                 drawPerimeter(d);
             });
-<<<<<<< HEAD
         } else {
             perimeterPaths.attr("d", "");
         }
 
         if (force) {
             force.alphaTarget(0.05).restart();
-=======
-            if (force) {
-                force.alphaTarget(0.1).restart();
-            }
-        } else {
-            perimeterPaths.attr("d", "");
-            if (force) {
-                force.alphaTarget(0.1).restart();
-            }
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
         }
 
         info.style("visibility", showInfo ? "visible" : "hidden");
@@ -535,11 +461,7 @@ function drawNodes(nodesAndLinks, description) {
      * @return {Object} - the drag object that chooses the drag phase.
      */
     function drag(simulation) {                                                     // Manages the drag actions, called by nodes
-<<<<<<< HEAD
         let x, y, dx, dy = 0;
-=======
-        let x, y, dx, dy;
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
 
         /**
          * Manages the beginning of a drag.
@@ -548,11 +470,7 @@ function drawNodes(nodesAndLinks, description) {
          * @return {undefined} this function does not return anything
          */
         function dragstarted(event) {                                               // Manages the begining of a drag
-<<<<<<< HEAD
             if (!event.active) simulation.alphaTarget(0.1).restart();
-=======
-            if (!event.active) simulation.alphaTarget(0.3).restart();
->>>>>>> 176bb9e (Resolve "Open Stack Topology Graph Generator")
 
             x = event.subject.x;
             y = event.subject.y;
