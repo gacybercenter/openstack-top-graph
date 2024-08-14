@@ -298,7 +298,7 @@ function nodeMap(parsedContent) {
                             source = newSource.target
                         }
                     }
-                    if (source.type !== 'Net' || !mergeNodeTypes[target.type]) {
+                    if (source.type !== 'Subnet' || !mergeNodeTypes[target.type]) {
                         links.push({ source, target });
                     }
                 }

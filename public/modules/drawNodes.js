@@ -141,12 +141,12 @@ function drawNodes(nodesAndLinks, description) {
         .attr("cursor", "crosshair")
         .call(zoom);
 
-    const subnetGroups = svg.selectAll('.subnet-group')                                 // Add Subnet nodes to a group
-        .data(nodes.filter(d => d.type === 'Subnet'))
+    const netGroups = svg.selectAll('.net-group')                                 // Add Subnet nodes to a group
+        .data(nodes.filter(d => d.type === 'Net'))
         .join('g')
-        .attr('class', 'subnet-group');
+        .attr('class', 'net-group');
 
-    const perimeterPaths = subnetGroups.selectAll('.perimeter-path')                    // Bind each subnet node to its own group
+    const perimeterPaths = netGroups.selectAll('.perimeter-path')                    // Bind each subnet node to its own group
         .data(d => [d])
         .join('path')
         .attr('class', 'perimeter-path')
@@ -422,7 +422,7 @@ function drawNodes(nodesAndLinks, description) {
         }
 
         if (subnet) {
-            subnetGroups.each(function (d) {
+            netGroups.each(function (d) {
                 drawPerimeter(d);
             });
         } else {
@@ -447,7 +447,7 @@ function drawNodes(nodesAndLinks, description) {
     function zoomed(event) {                                                        // Define the zoomed function to account for space changing
         const { transform } = event;
 
-        subnetGroups.attr('transform', transform);
+        netGroups.attr('transform', transform);
         linksGroup.attr('transform', transform);
         nodesGroup.attr('transform', transform);
         imageGroup.attr('transform', transform);
