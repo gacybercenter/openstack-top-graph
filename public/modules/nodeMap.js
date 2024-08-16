@@ -298,9 +298,9 @@ function nodeMap(parsedContent) {
                             source = newSource.target
                         }
                     }
-                    if (source.type !== 'Subnet' || !mergeNodeTypes[target.type]) {
+                    if ((source.type !== 'Subnet') || !mergeNodeTypes[target.type]) {
                         links.push({ source, target });
-                    }
+                    } 
                 }
             }
         };
@@ -329,7 +329,12 @@ function nodeMap(parsedContent) {
 
     if (mergeNodes) {
         for (const node of nodes) {
-            if (node.data) portLinks.push(...mergeNode(node.data, node.name, nodes, amounts));
+            if (node.data) {
+                if (node.data.network_id && node.type !== 'Subnet') {
+                    node.data.network_id = [node.data.network_id];
+                }
+                portLinks.push(...mergeNode(node.data, node.name, nodes, amounts));
+            }
         }
         for (const portLink of portLinks) {
             mergeContents(portLink.target, portLink.source);
