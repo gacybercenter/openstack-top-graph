@@ -279,10 +279,12 @@ function nodeMap(parsedContent) {
         const action = (property, parentResourceName) => {
             const isResource = property.get_resource !== undefined;
             const isPort = property.port !== undefined;
+            const isNetwork = property.network !== undefined;
+            const isSubnet = property.network_id !== undefined;
 
-            if (isResource || isPort) {
+            if (isResource || isPort || isNetwork || isSubnet) {
                 let target = nodes.find(n => n.name === parentResourceName);
-                let sourceName = property.get_resource || property.port;
+                let sourceName = property.get_resource || property.port || property.network || property.network_id;
                 let source = nodes.find(n => n.name === sourceName) ||
                     duplicateNodes.find(n => n.name === sourceName);
 
@@ -296,7 +298,7 @@ function nodeMap(parsedContent) {
                             source = newSource.target
                         }
                     }
-                    if (source.type !== 'Net' || !mergeNodeTypes[target.type]) {
+                    if (source.type !== 'Subnet' || !mergeNodeTypes[target.type]) {
                         links.push({ source, target });
                     }
                 }
