@@ -131,6 +131,36 @@ function nodeMap(parsedContent) {
             "vcpus": 8,
             "ram": 16,
             "disk": 128
+        },
+        "so.landing": {
+            "vcpus": 4,
+            "ram": 8,
+            "disk": 100
+        },
+        "so.manager": {
+            "vcpus": 6,
+            "ram": 20,
+            "disk": 250
+        },
+        "so.manager.standalone": {
+            "vcpus": 8,
+            "ram": 32,
+            "disk": 300
+        },
+        "so.managersearch": {
+            "vcpus": 8,
+            "ram": 32,
+            "disk": 300
+        },
+        "so.search": {
+            "vcpus": 4,
+            "ram": 20,
+            "disk": 250
+        },
+        "so.sensor": {
+            "vcpus": 6,
+            "ram": 20,
+            "disk": 250
         }
     }
     let nodes = [root];
