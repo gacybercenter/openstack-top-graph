@@ -132,36 +132,6 @@ function nodeMap(parsedContent) {
             "ram": 16,
             "disk": 128
         },
-        "so.landing": {
-            "vcpus": 4,
-            "ram": 8,
-            "disk": 100
-        },
-        "so.manager": {
-            "vcpus": 6,
-            "ram": 20,
-            "disk": 250
-        },
-        "so.manager.standalone": {
-            "vcpus": 8,
-            "ram": 32,
-            "disk": 300
-        },
-        "so.managersearch": {
-            "vcpus": 8,
-            "ram": 32,
-            "disk": 300
-        },
-        "so.search": {
-            "vcpus": 4,
-            "ram": 20,
-            "disk": 250
-        },
-        "so.sensor": {
-            "vcpus": 6,
-            "ram": 20,
-            "disk": 250
-        }
     }
     let nodes = [root];
     let links = [];
@@ -182,24 +152,27 @@ function nodeMap(parsedContent) {
         amounts[type] = (amounts[type] || 0) + 1;
         switch (type) {
             case 'Server':
-                if (flavors.hasOwnProperty(data.flavor)) {
-                    var vcpus = flavors[data.flavor].vcpus;
-                    var ram = flavors[data.flavor].ram;
-                    var disk = flavors[data.flavor].disk;
+                let flavor = data.flavor;
+                if (flavor.get_resource) {
+                    flavor = flavor.get_resource;
+                }
+                if (flavors.hasOwnProperty(flavor)) {
+                    var vcpus = flavors[flavor].vcpus;
+                    var ram = flavors[flavor].ram;
+                    var disk = flavors[flavor].disk;
                     var resourcesText = `vCPUs: ${vcpus} | RAM: ${ram} GB | Disk: ${disk} GB`;
 
-                    data.flavor = `${data.flavor} (${resourcesText})`;
+                    data.flavor = `${flavor} (${resourcesText})`;
 
                     resources.vcpus += vcpus;
                     resources.ram += ram;
                     resources.disk += disk;
                 } else {
-                    data.flavor = `${data.flavor} (Unknown)`;
-                    alert(`Unknown flavor: ${data.flavor}`);
-                    console.log(`Unknown flavor: ${data.flavor}`);
+                    console.log(`${node.name} does not have a valid flavor: ${flavor}`);
                 }
                 nodes.push(node);
                 break;
+            case 'Flavor':
             case 'SecurityGroup':
             case 'SoftwareConfig':
             case 'RandomString':
@@ -328,14 +301,22 @@ function nodeMap(parsedContent) {
                             source = newSource.target
                         }
                     }
-                    if ((source.type !== 'Subnet') || !mergeNodeTypes[target.type]) {
+                    if ((source.type !== 'Net') || !mergeNodeTypes[target.type]) {
                         links.push({ source, target });
-                    } 
+                    }
                 }
             }
         };
 
         traverseObject(property, action, parentResourceName);
+    }
+
+    for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
+        if (resource.type === 'OS::Nova::Flavor') {
+            if (resource.properties.ram === null) resource.properties.ram = 0;
+            resource.properties.ram = resource.properties.ram / 1024; // Convert to GB
+            flavors[resourceName] = resource.properties;
+        }
     }
 
     for (const [resourceName, resource] of Object.entries(parsedContent.resources)) {
@@ -360,7 +341,7 @@ function nodeMap(parsedContent) {
     if (mergeNodes) {
         for (const node of nodes) {
             if (node.data) {
-                if (node.data.network_id && node.type !== 'Subnet') {
+                if (node.data.network_id && node.type !== 'Net') {
                     node.data.network_id = [node.data.network_id];
                 }
                 portLinks.push(...mergeNode(node.data, node.name, nodes, amounts));

@@ -141,12 +141,12 @@ function drawNodes(nodesAndLinks, description) {
         .attr("cursor", "crosshair")
         .call(zoom);
 
-    const netGroups = svg.selectAll('.net-group')                                 // Add Subnet nodes to a group
-        .data(nodes.filter(d => d.type === 'Net'))
+    const subnetGroups = svg.selectAll('.subnet-group')                                 // Add Subnet nodes to a group
+        .data(nodes.filter(d => d.type === 'Subnet'))
         .join('g')
-        .attr('class', 'net-group');
+        .attr('class', 'subnet-group');
 
-    const perimeterPaths = netGroups.selectAll('.perimeter-path')                    // Bind each subnet node to its own group
+    const perimeterPaths = subnetGroups.selectAll('.perimeter-path')                    // Bind each subnet node to its own group
         .data(d => [d])
         .join('path')
         .attr('class', 'perimeter-path')
@@ -191,7 +191,7 @@ function drawNodes(nodesAndLinks, description) {
                 n !== node &&
                 links.some(link =>
                     (node === link.source && n === link.target) ||
-                    (n.type === 'Net' && n === link.source && node === link.target)
+                    (n.type === 'Subnet' && n === link.source && node === link.target)
                 )
             );
             return linked.reduce((result, n) => {
@@ -422,7 +422,7 @@ function drawNodes(nodesAndLinks, description) {
         }
 
         if (subnet) {
-            netGroups.each(function (d) {
+            subnetGroups.each(function (d) {
                 drawPerimeter(d);
             });
         } else {
@@ -447,7 +447,7 @@ function drawNodes(nodesAndLinks, description) {
     function zoomed(event) {                                                        // Define the zoomed function to account for space changing
         const { transform } = event;
 
-        netGroups.attr('transform', transform);
+        subnetGroups.attr('transform', transform);
         linksGroup.attr('transform', transform);
         nodesGroup.attr('transform', transform);
         imageGroup.attr('transform', transform);
